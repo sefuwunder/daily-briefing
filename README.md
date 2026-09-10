@@ -13,10 +13,10 @@ regional news, and your outstanding ClickUp tasks — all on one page.
   - *Eastern Europe*: BBC Europe, Kyiv Independent
 - **Tasks** — outstanding tasks from your ClickUp list (completed ones are
   hidden), with priority dots and due-date pills.
-- **Headline mood** — fear-vs-hope linguistic scoring of the day's Hacker
-  News front page and The Guardian world headlines. Lexicon-based (with
-  basic negation handling), shown per source with a diverging meter plus
-  the most fearful / most hopeful headlines.
+- **Headline mood** — linguistic scoring of the day's Hacker News front page
+  (pessimism ↔ optimism) and The Guardian world headlines (fear ↔ hope).
+  Lexicon-based (with basic negation handling), shown per source with a
+  diverging meter plus the most negative / most positive headlines.
 
 ## Run it
 

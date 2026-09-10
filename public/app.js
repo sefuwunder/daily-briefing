@@ -121,10 +121,7 @@ async function loadNews() {
 
 // ---- mood ----
 function moodClass(i) {
-  return i <= -20 ? "fear" : i >= 20 ? "hope" : "neutral";
-}
-function moodEmoji(i) {
-  return i <= -20 ? "😨" : i >= 20 ? "🌱" : "😐";
+  return i <= -20 ? "neg" : i >= 20 ? "pos" : "neutral";
 }
 
 async function loadMood() {
@@ -141,21 +138,23 @@ async function loadMood() {
         ? `<div class="fill-fear" style="width:${w}%"></div>`
         : `<div class="fill-hope" style="width:${w}%"></div>`;
       const sign = s.index > 0 ? "+" : "";
+      const emoji = s.index <= -20 ? s.negEmoji : s.index >= 20 ? s.posEmoji : "😐";
       return `<div class="mood-src">
-        <div class="row"><span class="name">${escapeHtml(s.name)}</span>
-          <span class="idx ${cls}">${moodEmoji(s.index)} ${sign}${s.index}</span></div>
+        <div class="row"><div><div class="name">${escapeHtml(s.name)}</div>
+            <div class="spectrum">${escapeHtml(s.spectrum)}</div></div>
+          <span class="idx ${cls}">${emoji} ${sign}${s.index}</span></div>
         <div class="meter"><div class="mid"></div>${fill}</div>
-        <div class="counts">${s.count} headlines · 😨 ${s.fearLeaning} · 🌱 ${s.hopeLeaning} · 😐 ${s.neutral}</div>
+        <div class="counts">${s.count} headlines · ${s.negEmoji} ${s.negLeaning} ${escapeHtml(s.negLabel)} · ${s.posEmoji} ${s.posLeaning} ${escapeHtml(s.posLabel)} · 😐 ${s.neutral}</div>
       </div>`;
     }).join("");
 
     const item = (x) => {
       const cls = moodClass(x.index);
-      const words = [...x.fearWords.map((w) => `😨 ${w}`), ...x.hopeWords.map((w) => `🌱 ${w}`)].join(" · ");
+      const words = [...x.negWords.map((w) => `${x.negEmoji} ${w}`), ...x.posWords.map((w) => `${x.posEmoji} ${w}`)].join(" · ");
       return `<a class="mood-item" href="${escapeAttr(x.link)}" target="_blank" rel="noopener">
         <span class="story-title">${escapeHtml(x.title)}</span>
         <span class="chip ${cls}">${x.index > 0 ? "+" : ""}${x.index}</span>
-        <div class="story-meta"><span class="src">${escapeHtml(x.source)}</span></div>
+        <div class="story-meta"><span class="src">${escapeHtml(x.source)} · ${escapeHtml(x.spectrum)}</span></div>
         ${words ? `<div class="words">${escapeHtml(words)}</div>` : ""}
       </a>`;
     };
@@ -163,10 +162,10 @@ async function loadMood() {
     body.innerHTML = `
       <div class="mood-sources">${srcHtml}</div>
       <div class="mood-cols">
-        <div class="mood-col"><h3>Most fearful</h3>
-          ${data.fearful.length ? data.fearful.map(item).join("") : '<p class="muted">None today.</p>'}</div>
-        <div class="mood-col"><h3>Most hopeful</h3>
-          ${data.hopeful.length ? data.hopeful.map(item).join("") : '<p class="muted">None today.</p>'}</div>
+        <div class="mood-col"><h3>Most negative</h3>
+          ${data.negative.length ? data.negative.map(item).join("") : '<p class="muted">None today.</p>'}</div>
+        <div class="mood-col"><h3>Most positive</h3>
+          ${data.positive.length ? data.positive.map(item).join("") : '<p class="muted">None today.</p>'}</div>
       </div>`;
   } catch (e) {
     body.innerHTML = `<p class="error">Couldn't score headlines: ${escapeHtml(e.message)}</p>`;

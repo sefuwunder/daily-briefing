@@ -214,9 +214,10 @@ body {
 }
 .mood-src .row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
 .mood-src .name { font-weight: 650; font-size: 14.5px; }
-.mood-src .idx { font-weight: 700; font-size: 15px; }
-.idx.fear { color: var(--red); }
-.idx.hope { color: var(--green); }
+.mood-src .spectrum { font-size: 11.5px; color: var(--muted); font-weight: 500; margin-top: 1px; }
+.mood-src .idx { font-weight: 700; font-size: 15px; white-space: nowrap; }
+.idx.neg { color: var(--red); }
+.idx.pos { color: var(--green); }
 .idx.neutral { color: var(--muted); }
 .meter { position: relative; height: 10px; background: var(--bg); border-radius: 999px; overflow: hidden; margin-bottom: 8px; }
 .meter .mid { position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: var(--border); }
@@ -234,6 +235,6 @@ body {
   display: inline-block; font-size: 11.5px; font-weight: 700; border-radius: 999px;
   padding: 1px 8px; margin-left: 8px; vertical-align: 1px;
 }
-.chip.fear { background: rgba(248, 113, 113, 0.14); color: var(--red); }
-.chip.hope { background: rgba(74, 222, 128, 0.14); color: var(--green); }
+.chip.neg { background: rgba(248, 113, 113, 0.14); color: var(--red); }
+.chip.pos { background: rgba(74, 222, 128, 0.14); color: var(--green); }
 .words { color: var(--muted); font-size: 12px; margin-top: 3px; }

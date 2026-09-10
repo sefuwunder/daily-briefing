@@ -364,74 +364,147 @@ const NEGATORS = new Set(
    "shouldn't", "wouldn't", "hasn't", "haven't", "hadn't"]
 );
 
+// pessimism / optimism: tuned for tech headlines (Hacker News)
+const PESSIMISM_WORDS = new Set(
+  ("doom doomed gloom gloomy dying dead decline declines declining declined fail fails " +
+    "failed failing failure failures broken obsolete deprecated abandoned abandon sunset " +
+    "sunsetted killed worst terrible terribly awful dreadful bleak grim dire dystopia " +
+    "dystopian enshittification collapse collapsed collapsing crash crashed crashing crisis " +
+    "bubble burst overhyped layoffs fired firing pessimistic pessimism skeptical skepticism " +
+    "doubt doubts doubtful doubting uncertain uncertainty fragile fragility flawed flaw " +
+    "flaws bug bugs buggy slow slower slowest expensive costly overpriced waste wasted " +
+    "wasteful pointless useless scam scams fraud monopoly monopolistic stagnation stagnant " +
+    "surveillance creepy invasive").split(" ")
+);
+
+const OPTIMISM_WORDS = new Set(
+  ("optimistic optimism exciting excited excitement promising promise future futuristic " +
+    "breakthrough amazing incredible awesome love loved great greatest best fantastic " +
+    "wonderful impressive impressed beautiful elegant fast faster fastest cheap cheaper " +
+    "cheapest open openness democratize empowered empowering potential opportunity " +
+    "opportunities progress innovative innovation revolution revolutionary delightful fun " +
+    "cool neat clever brilliant genius milestone success successful thriving boom golden " +
+    "renaissance shipped shipping launched launch release released debut fix fixed fixes " +
+    "solve solved free").split(" ")
+);
+
+interface Spectrum {
+  id: string;
+  label: string; // "fear ↔ hope"
+  negLabel: string;
+  posLabel: string;
+  negEmoji: string;
+  posEmoji: string;
+  negWords: Set<string>;
+  posWords: Set<string>;
+}
+
+const FEAR_HOPE: Spectrum = {
+  id: "fear-hope",
+  label: "fear ↔ hope",
+  negLabel: "fear",
+  posLabel: "hope",
+  negEmoji: "😨",
+  posEmoji: "🌱",
+  negWords: FEAR_WORDS,
+  posWords: HOPE_WORDS,
+};
+
+const PESSIMISM_OPTIMISM: Spectrum = {
+  id: "pessimism-optimism",
+  label: "pessimism ↔ optimism",
+  negLabel: "pessimism",
+  posLabel: "optimism",
+  negEmoji: "📉",
+  posEmoji: "📈",
+  negWords: PESSIMISM_WORDS,
+  posWords: OPTIMISM_WORDS,
+};
+
 interface ScoredHeadline {
   title: string;
   link: string;
   source: string;
-  fear: number;
-  hope: number;
-  index: number; // -100 (fear) .. +100 (hope)
-  fearWords: string[];
-  hopeWords: string[];
+  spectrum: string;
+  negEmoji: string;
+  posEmoji: string;
+  neg: number;
+  pos: number;
+  index: number; // -100 (negative pole) .. +100 (positive pole)
+  negWords: string[];
+  posWords: string[];
 }
 
-function scoreHeadline(title: string, link: string, source: string): ScoredHeadline {
+function scoreHeadline(title: string, link: string, source: string, sp: Spectrum): ScoredHeadline {
   const tokens = title
     .toLowerCase()
     .replace(/[^a-z0-9'\s-]/g, " ")
     .split(/\s+/)
     .filter(Boolean);
-  let fear = 0;
-  let hope = 0;
-  const fearHits: string[] = [];
-  const hopeHits: string[] = [];
+  let neg = 0;
+  let pos = 0;
+  const negHits: string[] = [];
+  const posHits: string[] = [];
   tokens.forEach((raw, i) => {
     const word = raw.replace(/^'+|'+$/g, "");
-    let kind: "fear" | "hope" | null = null;
-    if (FEAR_WORDS.has(word)) kind = "fear";
-    else if (HOPE_WORDS.has(word)) kind = "hope";
+    let kind: "neg" | "pos" | null = null;
+    if (sp.negWords.has(word)) kind = "neg";
+    else if (sp.posWords.has(word)) kind = "pos";
     if (!kind) return;
     const prev = tokens.slice(Math.max(0, i - 2), i).map((t) => t.replace(/^'+|'+$/g, ""));
     const negated = prev.some((t) => NEGATORS.has(t) || t.endsWith("n't"));
-    if (negated) kind = kind === "fear" ? "hope" : "fear";
-    if (kind === "fear") {
-      fear++;
-      fearHits.push(word);
+    if (negated) kind = kind === "neg" ? "pos" : "neg";
+    if (kind === "neg") {
+      neg++;
+      negHits.push(word);
     } else {
-      hope++;
-      hopeHits.push(word);
+      pos++;
+      posHits.push(word);
     }
   });
-  const total = fear + hope;
+  const total = neg + pos;
   return {
     title,
     link,
     source,
-    fear,
-    hope,
-    index: total === 0 ? 0 : Math.round((100 * (hope - fear)) / total),
-    fearWords: [...new Set(fearHits)].slice(0, 5),
-    hopeWords: [...new Set(hopeHits)].slice(0, 5),
+    spectrum: sp.label,
+    negEmoji: sp.negEmoji,
+    posEmoji: sp.posEmoji,
+    neg,
+    pos,
+    index: total === 0 ? 0 : Math.round((100 * (pos - neg)) / total),
+    negWords: [...new Set(negHits)].slice(0, 5),
+    posWords: [...new Set(posHits)].slice(0, 5),
   };
 }
 
 interface MoodSummary {
   name: string;
+  spectrum: string;
+  negLabel: string;
+  posLabel: string;
+  negEmoji: string;
+  posEmoji: string;
   count: number;
   index: number;
-  fearLeaning: number;
-  hopeLeaning: number;
+  negLeaning: number;
+  posLeaning: number;
   neutral: number;
 }
 
-function summarizeMood(name: string, scored: ScoredHeadline[]): MoodSummary {
+function summarizeMood(name: string, sp: Spectrum, scored: ScoredHeadline[]): MoodSummary {
   const n = scored.length;
   return {
     name,
+    spectrum: sp.label,
+    negLabel: sp.negLabel,
+    posLabel: sp.posLabel,
+    negEmoji: sp.negEmoji,
+    posEmoji: sp.posEmoji,
     count: n,
     index: n ? Math.round(scored.reduce((s, x) => s + x.index, 0) / n) : 0,
-    fearLeaning: scored.filter((x) => x.index <= -20).length,
-    hopeLeaning: scored.filter((x) => x.index >= 20).length,
+    negLeaning: scored.filter((x) => x.index <= -20).length,
+    posLeaning: scored.filter((x) => x.index >= 20).length,
     neutral: scored.filter((x) => x.index > -20 && x.index < 20).length,
   };
 }
@@ -463,24 +536,29 @@ async function handleMood(): Promise<Response> {
       fetchHnHeadlines().catch(() => []),
       fetchGuardianHeadlines().catch(() => []),
     ]);
-    const hnScored = hn.map((h) => scoreHeadline(h.title, h.link, "Hacker News"));
-    const gScored = guardian.map((h) => scoreHeadline(h.title, h.link, "The Guardian"));
+    const hnScored = hn.map((h) => scoreHeadline(h.title, h.link, "Hacker News", PESSIMISM_OPTIMISM));
+    const gScored = guardian.map((h) => scoreHeadline(h.title, h.link, "The Guardian", FEAR_HOPE));
     const all = [...hnScored, ...gScored];
-    const byFear = [...all].filter((x) => x.index < 0).sort((a, b) => a.index - b.index).slice(0, 3);
-    const byHope = [...all].filter((x) => x.index > 0).sort((a, b) => b.index - a.index).slice(0, 3);
+    const byNeg = [...all].filter((x) => x.index < 0).sort((a, b) => a.index - b.index).slice(0, 3);
+    const byPos = [...all].filter((x) => x.index > 0).sort((a, b) => b.index - a.index).slice(0, 3);
     const slim = (x: ScoredHeadline) => ({
       title: x.title,
       link: x.link,
       source: x.source,
+      spectrum: x.spectrum,
+      negEmoji: x.negEmoji,
+      posEmoji: x.posEmoji,
       index: x.index,
-      fearWords: x.fearWords,
-      hopeWords: x.hopeWords,
+      negWords: x.negWords,
+      posWords: x.posWords,
     });
     return {
-      sources: [summarizeMood("Hacker News", hnScored), summarizeMood("The Guardian", gScored)],
-      overall: summarizeMood("All headlines", all),
-      fearful: byFear.map(slim),
-      hopeful: byHope.map(slim),
+      sources: [
+        summarizeMood("Hacker News", PESSIMISM_OPTIMISM, hnScored),
+        summarizeMood("The Guardian", FEAR_HOPE, gScored),
+      ],
+      negative: byNeg.map(slim),
+      positive: byPos.map(slim),
       updated: new Date().toISOString(),
     };
   });
