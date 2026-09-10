@@ -9,7 +9,7 @@
 <body>
 <header class="topbar">
   <div>
-    <h1>☀️ Morning Briefing</h1>
+    <h1 id="briefing-title">☀️ Morning Briefing</h1>
     <p id="dateline" class="dateline">…</p>
   </div>
   <button id="refresh-all" class="ghost-btn" title="Refresh everything">↻ Refresh</button>
@@ -22,6 +22,7 @@
       <form id="city-form" class="city-form" autocomplete="off">
         <input id="city-input" type="text" placeholder="City…" aria-label="City">
         <button type="submit" class="ghost-btn small">Go</button>
+        <button type="button" id="locate-btn" class="ghost-btn small" title="Use my approximate location (from IP)">📍</button>
       </form>
     </div>
     <div id="weather-body"><p class="muted">Loading weather…</p></div>

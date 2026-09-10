@@ -6,11 +6,27 @@
   --text: #e8e6df;
   --muted: #9aa3ad;
   --accent: #f0b429;
-  --accent-soft: rgba(240, 180, 41, 0.12);
+  --accent-soft: color-mix(in srgb, var(--accent) 12%, transparent);
   --green: #4ade80;
   --red: #f87171;
   --blue: #60a5fa;
   --radius: 14px;
+}
+
+/* Daypart themes — the heading, greeting and palette shift as the day progresses.
+   body[data-daypart] is set by applyDaypart() in app.js. */
+body[data-daypart="afternoon"] {
+  --accent: #38bdf8;
+  background: radial-gradient(1200px 600px at 20% -10%, #14293d 0%, var(--bg) 55%) fixed;
+}
+body[data-daypart="evening"] {
+  --accent: #fb7185;
+  background: radial-gradient(1200px 600px at 20% -10%, #2b1a2e 0%, var(--bg) 55%) fixed;
+}
+body[data-daypart="night"] {
+  --accent: #818cf8;
+  --bg: #0b0e14;
+  background: radial-gradient(1200px 600px at 20% -10%, #0e1330 0%, var(--bg) 55%) fixed;
 }
 
 * { box-sizing: border-box; }
@@ -85,7 +101,7 @@ body {
 .badge {
   background: var(--accent-soft);
   color: var(--accent);
-  border: 1px solid rgba(240, 180, 41, 0.35);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
   font-size: 12px;
   padding: 2px 10px;
   border-radius: 999px;
@@ -163,7 +179,7 @@ body {
   padding: 1px 9px;
   font-size: 12px;
 }
-.pill.due-soon { border-color: rgba(240, 180, 41, 0.5); color: var(--accent); }
+.pill.due-soon { border-color: color-mix(in srgb, var(--accent) 50%, transparent); color: var(--accent); }
 .task-list { max-height: 380px; overflow-y: auto; }
 
 /* news */
@@ -193,6 +209,15 @@ body {
 .story-title { font-size: 15.5px; line-height: 1.5; font-weight: 550; }
 .story-meta { color: var(--muted); font-size: 13px; margin-top: 4px; display: flex; gap: 8px; }
 .story-meta .src { color: var(--accent); font-weight: 600; }
+
+.arts-head {
+  margin: 20px 0 2px;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
 
 .foot {
   max-width: 1200px;

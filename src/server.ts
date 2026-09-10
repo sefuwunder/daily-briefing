@@ -62,7 +62,7 @@ async function handleWeather(url: URL): Promise<Response> {
   const city = url.searchParams.get("city")?.trim();
   let lat = url.searchParams.get("lat");
   let lon = url.searchParams.get("lon");
-  let name = "";
+  let name = url.searchParams.get("name")?.trim() || "";
   let country = "";
 
   if (city) {
@@ -145,6 +145,23 @@ const REGION_LABELS: Record<string, string> = {
   easteurope: "Eastern Europe",
 };
 
+// indie / DIY / underground arts & culture feeds per region
+const ARTS_FEEDS: Record<string, { source: string; url: string }[]> = {
+  caricom: [
+    { source: "LargeUp", url: "https://www.largeup.com/feed/" },
+    { source: "Repeating Islands", url: "https://repeatingislands.com/feed/" },
+    { source: "Caribbean Beat", url: "https://www.caribbean-beat.com/feed" },
+  ],
+  africa: [
+    { source: "The NATIVE", url: "https://thenativemag.com/feed" },
+    { source: "Music In Africa", url: "https://www.musicinafrica.net/feed" },
+  ],
+  easteurope: [
+    { source: "Bird In Flight", url: "https://birdinflight.com/feed" },
+    { source: "Lossi 36", url: "https://lossi36.com/feed/" },
+  ],
+};
+
 function stripCdata(s: string): string {
   return s
     .replace(/<!\[CDATA\[/g, "")
@@ -155,6 +172,8 @@ function stripCdata(s: string): string {
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, n) => String.fromCharCode(parseInt(n, 16)))
     .replace(/&nbsp;/g, " ")
     .trim();
 }
@@ -189,38 +208,46 @@ function parseRss(xml: string, source: string): NewsItem[] {
   return items;
 }
 
+async function loadFeedItems(
+  feeds: { source: string; url: string }[],
+  limit: number
+): Promise<NewsItem[]> {
+  const settled = await Promise.allSettled(
+    feeds.map(async (f) => {
+      const r = await fetchWithTimeout(f.url, 15000);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return parseRss(await r.text(), f.source);
+    })
+  );
+  const seen = new Set<string>();
+  const merged: NewsItem[] = [];
+  for (const s of settled) {
+    if (s.status !== "fulfilled") continue;
+    for (const item of s.value) {
+      if (seen.has(item.link)) continue;
+      seen.add(item.link);
+      merged.push(item);
+    }
+  }
+  merged.sort((a, b) => (Date.parse(b.pubDate) || 0) - (Date.parse(a.pubDate) || 0));
+  return merged.slice(0, limit);
+}
+
 async function handleNews(url: URL): Promise<Response> {
   const region = url.searchParams.get("region") || "caricom";
   const feeds = FEEDS[region];
   if (!feeds) return json({ error: "Unknown region" }, 400);
 
   const data = await cached(`news:${region}`, 20 * 60 * 1000, async () => {
-    const settled = await Promise.allSettled(
-      feeds.map(async (f) => {
-        const r = await fetchWithTimeout(f.url, 15000);
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return parseRss(await r.text(), f.source);
-      })
-    );
-    const seen = new Set<string>();
-    const merged: NewsItem[] = [];
-    for (const s of settled) {
-      if (s.status !== "fulfilled") continue;
-      for (const item of s.value) {
-        if (seen.has(item.link)) continue;
-        seen.add(item.link);
-        merged.push(item);
-      }
-    }
-    merged.sort((a, b) => {
-      const ta = Date.parse(a.pubDate) || 0;
-      const tb = Date.parse(b.pubDate) || 0;
-      return tb - ta;
-    });
+    const [items, arts] = await Promise.all([
+      loadFeedItems(feeds, 15),
+      loadFeedItems(ARTS_FEEDS[region] || [], 8),
+    ]);
     return {
       region,
       label: REGION_LABELS[region],
-      items: merged.slice(0, 15),
+      items,
+      arts,
       updated: new Date().toISOString(),
     };
   });

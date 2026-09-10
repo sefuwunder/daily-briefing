@@ -2,9 +2,36 @@
 const $ = (id) => document.getElementById(id);
 
 const state = {
-  city: localStorage.getItem("briefing_city") || "New York",
+  city: localStorage.getItem("briefing_city") || "",
   newsRegion: "caricom",
+  geo: null,       // { lat, lon, name } from IP geolocation
+  geoTried: false, // only hit the IP lookup once per page load
 };
+
+// ---- daypart heading + theme ----
+const DAYPARTS = {
+  morning:   { emoji: "☀️", title: "Morning Briefing",   greet: "Good morning" },
+  afternoon: { emoji: "🌤️", title: "Afternoon Briefing", greet: "Good afternoon" },
+  evening:   { emoji: "🌆", title: "Evening Briefing",   greet: "Good evening" },
+  night:     { emoji: "🌙", title: "Night Briefing",     greet: "Good night" },
+};
+
+function daypart() {
+  const h = new Date().getHours();
+  if (h >= 5 && h < 12) return "morning";
+  if (h >= 12 && h < 17) return "afternoon";
+  if (h >= 17 && h < 22) return "evening";
+  return "night";
+}
+
+function applyDaypart() {
+  const dp = daypart();
+  const m = DAYPARTS[dp];
+  document.body.dataset.daypart = dp; // drives the theme in styles.css
+  document.title = m.title;
+  $("briefing-title").innerHTML = `${m.emoji} ${m.title}`;
+  renderDateline();
+}
 
 // ---- header ----
 function renderDateline() {
@@ -12,16 +39,41 @@ function renderDateline() {
   const date = now.toLocaleDateString("en-US", {
     weekday: "long", month: "long", day: "numeric", year: "numeric",
   });
-  const h = now.getHours();
-  const greet = h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
-  $("dateline").textContent = `${greet} — ${date}`;
+  $("dateline").textContent = `${DAYPARTS[daypart()].greet} — ${date}`;
 }
 
 // ---- weather ----
+async function detectGeo() {
+  // Approximate location from the viewer's IP (no key, no signup).
+  try {
+    const r = await fetch("https://ipapi.co/json/");
+    if (!r.ok) return null;
+    const j = await r.json();
+    if (!j.latitude || !j.longitude) return null;
+    const name = [j.city, j.country_name].filter(Boolean).join(", ");
+    return { lat: j.latitude, lon: j.longitude, name: name || "Current location" };
+  } catch {
+    return null;
+  }
+}
+
+async function weatherUrl() {
+  if (state.city) return `/api/weather?city=${encodeURIComponent(state.city)}`;
+  if (!state.geoTried) {
+    state.geoTried = true;
+    state.geo = await detectGeo();
+  }
+  if (state.geo) {
+    return `/api/weather?lat=${state.geo.lat}&lon=${state.geo.lon}` +
+      `&name=${encodeURIComponent(state.geo.name)}`;
+  }
+  return `/api/weather?city=${encodeURIComponent("New York")}`; // last-resort fallback
+}
+
 async function loadWeather() {
   const body = $("weather-body");
   try {
-    const r = await fetch(`/api/weather?city=${encodeURIComponent(state.city)}`);
+    const r = await fetch(await weatherUrl());
     const w = await r.json();
     if (!r.ok) throw new Error(w.error || "weather failed");
     const c = w.current;
@@ -30,6 +82,8 @@ async function loadWeather() {
       return `<div class="wx-day"><div class="d">${label}</div><div class="i">${d.icon}</div>
         <div class="t">${d.high_c}° <span>${d.low_c}°</span></div></div>`;
     }).join("");
+    const geoNote = (!state.city && state.geo)
+      ? `<br><span style="font-size:12px">📍 approximate location from your IP</span>` : "";
     body.innerHTML = `
       <div class="wx-now">
         <div class="wx-icon">${c.icon}</div>
@@ -37,7 +91,7 @@ async function loadWeather() {
           <div class="wx-temp">${c.temp_c}°<small>C</small></div>
           <div class="wx-meta"><strong>${w.place}</strong><br>
           ${c.description} · feels like ${c.feels_c}°<br>
-          💧 ${c.humidity}% · 💨 ${c.wind_kph} km/h</div>
+          💧 ${c.humidity}% · 💨 ${c.wind_kph} km/h${geoNote}</div>
         </div>
       </div>
       <div class="wx-days">${days}</div>`;
@@ -102,16 +156,21 @@ async function loadNews() {
     const r = await fetch(`/api/news?region=${state.newsRegion}`);
     const data = await r.json();
     if (!r.ok) throw new Error(data.error || "news failed");
-    if (!data.items.length) {
+    if (!data.items.length && !(data.arts && data.arts.length)) {
       body.innerHTML = `<p class="muted">No headlines right now.</p>`;
       return;
     }
-    body.innerHTML = data.items.map((s) => `
+    const storyHtml = (s) => `
       <a class="story" href="${escapeAttr(s.link)}" target="_blank" rel="noopener">
         <div class="story-title">${escapeHtml(s.title)}</div>
         <div class="story-meta"><span class="src">${escapeHtml(s.source)}</span>
           <span>${timeAgo(s.pubDate)}</span></div>
-      </a>`).join("");
+      </a>`;
+    const artsHtml = (data.arts && data.arts.length)
+      ? `<h3 class="arts-head">🎨 Underground arts &amp; culture</h3>` +
+        data.arts.map(storyHtml).join("")
+      : "";
+    body.innerHTML = data.items.map(storyHtml).join("") + artsHtml;
     $("updated").textContent =
       `News updated ${new Date(data.updated).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`;
   } catch (e) {
@@ -201,6 +260,15 @@ $("city-form").addEventListener("submit", (e) => {
   loadWeather();
 });
 
+$("locate-btn").addEventListener("click", () => {
+  state.city = "";
+  state.geo = null;
+  state.geoTried = false;
+  localStorage.removeItem("briefing_city");
+  $("city-input").placeholder = "City…";
+  loadWeather();
+});
+
 async function refreshAll() {
   await Promise.all([loadWeather(), loadTasks(), loadNews(), loadMood()]);
 }
@@ -208,7 +276,8 @@ $("refresh-all").addEventListener("click", refreshAll);
 $("refresh-tasks").addEventListener("click", loadTasks);
 $("refresh-mood").addEventListener("click", loadMood);
 
-renderDateline();
-$("city-input").placeholder = state.city;
+applyDaypart();
+$("city-input").placeholder = state.city || "City…";
 refreshAll();
 setInterval(refreshAll, 15 * 60 * 1000);
+setInterval(applyDaypart, 5 * 60 * 1000); // flip heading/theme when the daypart changes
