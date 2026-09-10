@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Morning Briefing</title>
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div>
+    <h1>☀️ Morning Briefing</h1>
+    <p id="dateline" class="dateline">…</p>
+  </div>
+  <button id="refresh-all" class="ghost-btn" title="Refresh everything">↻ Refresh</button>
+</header>
+
+<main class="grid">
+  <section class="card weather" aria-label="Weather">
+    <div class="card-head">
+      <h2>Weather</h2>
+      <form id="city-form" class="city-form" autocomplete="off">
+        <input id="city-input" type="text" placeholder="City…" aria-label="City">
+        <button type="submit" class="ghost-btn small">Go</button>
+      </form>
+    </div>
+    <div id="weather-body"><p class="muted">Loading weather…</p></div>
+  </section>
+
+  <section class="card tasks" aria-label="ClickUp tasks">
+    <div class="card-head">
+      <h2>Outstanding tasks <span id="task-count" class="badge"></span></h2>
+      <button id="refresh-tasks" class="ghost-btn small" title="Refresh tasks">↻</button>
+    </div>
+    <div id="tasks-body"><p class="muted">Loading tasks…</p></div>
+  </section>
+
+  <section class="card news" aria-label="News">
+    <div class="card-head">
+      <h2>News</h2>
+      <nav class="tabs" role="tablist">
+        <button class="tab active" data-region="caricom" role="tab">CARICOM</button>
+        <button class="tab" data-region="africa" role="tab">Africa</button>
+        <button class="tab" data-region="easteurope" role="tab">Eastern Europe</button>
+      </nav>
+    </div>
+    <div id="news-body"><p class="muted">Loading headlines…</p></div>
+  </section>
+</main>
+
+<footer class="foot">
+  <span id="updated" class="muted"></span>
+</footer>
+
+<script src="/app.js"></script>
+</body>
+</html>
