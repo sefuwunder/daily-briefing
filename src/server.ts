@@ -319,6 +319,175 @@ async function handleTasks(): Promise<Response> {
 }
 
 // ---------------------------------------------------------------------------
+// headline mood: fear vs hope (lexicon scoring)
+// ---------------------------------------------------------------------------
+
+const FEAR_WORDS = new Set(
+  ("fear fears feared fearful threat threats threatened threatening crisis wars warfare " +
+    "attack attacks attacked attacker deadly dead death deaths kill killed killing kills " +
+    "warning warnings warn warned risk risks risky danger dangerous collapse collapsed collapsing " +
+    "panic panicked terror terrorist terrorists terrorism terrified terrifying crash crashed crashing " +
+    "emergency alarm alarming alarmed dread dreaded catastrophe catastrophic disaster disastrous " +
+    "violence violent violently outbreak shortage shortages recession inflation doom doomed " +
+    "nightmare horror horrible hostage hostages missile missiles bomb bombs bombing bombings " +
+    "sanction sanctions conflict conflicts clash clashes clashed unrest riot riots evacuate " +
+    "evacuated evacuation evacuations casualty casualties wounded airstrike airstrikes invasion " +
+    "invade invaded nuclear meltdown hack hacked hacking breach breached scam scams fraud " +
+    "fraudulent lawsuit probe probed scandal scandals corrupt corruption bankrupt bankruptcy " +
+    "layoffs plague epidemic pandemic famine drought flood floods flooding wildfire wildfires " +
+    "earthquake hurricane tornado slaughter massacre kidnapped kidnapping assault murder " +
+    "murdered suicide poison toxic lethal fatal fatalities grim bleak dire desperate desperation " +
+    "chaos chaotic turmoil upheaval crackdown siege besieged coup curfew banned expel expelled " +
+    "deport tariff tariffs").split(" ")
+);
+
+const HOPE_WORDS = new Set(
+  ("hope hopes hoped hopeful breakthrough breakthroughs success successes successful " +
+    "successfully win wins won winning winner progress peaceful peace recovery recovered " +
+    "recovering growth growing grown record records celebrate celebrated celebrates celebration " +
+    "optimistic optimism solution solutions solve solved solving launch launches launched " +
+    "launching discover discovered discovers discovery discoveries cure cured cures rescue " +
+    "rescued rescues thrive thriving thrives milestone milestones promise promises promised " +
+    "promising bright brighter advance advances advanced advancing advancement innovation " +
+    "innovations innovative boom booming rally rallied rallies surging surge surged triumph " +
+    "triumphant victory victories victorious heal healed healing heals rebuild rebuilt " +
+    "rebuilding unite united uniting unity cooperation deal deals agreement agreements agreed " +
+    "approve approved approval save saved saving relief relieved comeback revive revived " +
+    "revival flourish flourishing prosper prosperity prosperous uplift uplifting inspire " +
+    "inspired inspiring inspiration hero heroes heroic generous generosity donate donated " +
+    "charity kindness compassion mercy freedom liberty").split(" ")
+);
+
+const NEGATORS = new Set(
+  ["not", "no", "never", "neither", "none", "without", "cannot", "can't", "won't",
+   "isn't", "aren't", "wasn't", "weren't", "don't", "doesn't", "didn't", "couldn't",
+   "shouldn't", "wouldn't", "hasn't", "haven't", "hadn't"]
+);
+
+interface ScoredHeadline {
+  title: string;
+  link: string;
+  source: string;
+  fear: number;
+  hope: number;
+  index: number; // -100 (fear) .. +100 (hope)
+  fearWords: string[];
+  hopeWords: string[];
+}
+
+function scoreHeadline(title: string, link: string, source: string): ScoredHeadline {
+  const tokens = title
+    .toLowerCase()
+    .replace(/[^a-z0-9'\s-]/g, " ")
+    .split(/\s+/)
+    .filter(Boolean);
+  let fear = 0;
+  let hope = 0;
+  const fearHits: string[] = [];
+  const hopeHits: string[] = [];
+  tokens.forEach((raw, i) => {
+    const word = raw.replace(/^'+|'+$/g, "");
+    let kind: "fear" | "hope" | null = null;
+    if (FEAR_WORDS.has(word)) kind = "fear";
+    else if (HOPE_WORDS.has(word)) kind = "hope";
+    if (!kind) return;
+    const prev = tokens.slice(Math.max(0, i - 2), i).map((t) => t.replace(/^'+|'+$/g, ""));
+    const negated = prev.some((t) => NEGATORS.has(t) || t.endsWith("n't"));
+    if (negated) kind = kind === "fear" ? "hope" : "fear";
+    if (kind === "fear") {
+      fear++;
+      fearHits.push(word);
+    } else {
+      hope++;
+      hopeHits.push(word);
+    }
+  });
+  const total = fear + hope;
+  return {
+    title,
+    link,
+    source,
+    fear,
+    hope,
+    index: total === 0 ? 0 : Math.round((100 * (hope - fear)) / total),
+    fearWords: [...new Set(fearHits)].slice(0, 5),
+    hopeWords: [...new Set(hopeHits)].slice(0, 5),
+  };
+}
+
+interface MoodSummary {
+  name: string;
+  count: number;
+  index: number;
+  fearLeaning: number;
+  hopeLeaning: number;
+  neutral: number;
+}
+
+function summarizeMood(name: string, scored: ScoredHeadline[]): MoodSummary {
+  const n = scored.length;
+  return {
+    name,
+    count: n,
+    index: n ? Math.round(scored.reduce((s, x) => s + x.index, 0) / n) : 0,
+    fearLeaning: scored.filter((x) => x.index <= -20).length,
+    hopeLeaning: scored.filter((x) => x.index >= 20).length,
+    neutral: scored.filter((x) => x.index > -20 && x.index < 20).length,
+  };
+}
+
+async function fetchHnHeadlines(): Promise<{ title: string; link: string }[]> {
+  const r = await fetchWithTimeout(
+    "https://hn.algolia.com/api/v1/search?tags=front_page&hitsPerPage=40"
+  );
+  if (!r.ok) throw new Error("HN fetch failed");
+  const body: any = await r.json();
+  return (body.hits || [])
+    .filter((h: any) => h.title)
+    .slice(0, 35)
+    .map((h: any) => ({
+      title: h.title,
+      link: h.url || `https://news.ycombinator.com/item?id=${h.objectID}`,
+    }));
+}
+
+async function fetchGuardianHeadlines(): Promise<{ title: string; link: string }[]> {
+  const r = await fetchWithTimeout("https://www.theguardian.com/world/rss");
+  if (!r.ok) throw new Error("Guardian fetch failed");
+  return parseRss(await r.text(), "The Guardian").slice(0, 25);
+}
+
+async function handleMood(): Promise<Response> {
+  const data = await cached("mood", 30 * 60 * 1000, async () => {
+    const [hn, guardian] = await Promise.all([
+      fetchHnHeadlines().catch(() => []),
+      fetchGuardianHeadlines().catch(() => []),
+    ]);
+    const hnScored = hn.map((h) => scoreHeadline(h.title, h.link, "Hacker News"));
+    const gScored = guardian.map((h) => scoreHeadline(h.title, h.link, "The Guardian"));
+    const all = [...hnScored, ...gScored];
+    const byFear = [...all].filter((x) => x.index < 0).sort((a, b) => a.index - b.index).slice(0, 3);
+    const byHope = [...all].filter((x) => x.index > 0).sort((a, b) => b.index - a.index).slice(0, 3);
+    const slim = (x: ScoredHeadline) => ({
+      title: x.title,
+      link: x.link,
+      source: x.source,
+      index: x.index,
+      fearWords: x.fearWords,
+      hopeWords: x.hopeWords,
+    });
+    return {
+      sources: [summarizeMood("Hacker News", hnScored), summarizeMood("The Guardian", gScored)],
+      overall: summarizeMood("All headlines", all),
+      fearful: byFear.map(slim),
+      hopeful: byHope.map(slim),
+      updated: new Date().toISOString(),
+    };
+  });
+  return json(data);
+}
+
+// ---------------------------------------------------------------------------
 // static files + routes
 // ---------------------------------------------------------------------------
 
@@ -352,6 +521,7 @@ const server = Bun.serve({
       if (url.pathname === "/api/weather") return await handleWeather(url);
       if (url.pathname === "/api/news") return await handleNews(url);
       if (url.pathname === "/api/tasks") return await handleTasks();
+      if (url.pathname === "/api/mood") return await handleMood();
       if (url.pathname === "/api/health") return json({ ok: true, time: new Date().toISOString() });
       const staticRes = await serveStatic(url.pathname);
       if (staticRes) return staticRes;

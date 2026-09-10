@@ -119,6 +119,60 @@ async function loadNews() {
   }
 }
 
+// ---- mood ----
+function moodClass(i) {
+  return i <= -20 ? "fear" : i >= 20 ? "hope" : "neutral";
+}
+function moodEmoji(i) {
+  return i <= -20 ? "😨" : i >= 20 ? "🌱" : "😐";
+}
+
+async function loadMood() {
+  const body = $("mood-body");
+  try {
+    const r = await fetch("/api/mood");
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || "mood failed");
+
+    const srcHtml = data.sources.map((s) => {
+      const cls = moodClass(s.index);
+      const w = Math.min(50, Math.abs(s.index) / 2);
+      const fill = s.index < 0
+        ? `<div class="fill-fear" style="width:${w}%"></div>`
+        : `<div class="fill-hope" style="width:${w}%"></div>`;
+      const sign = s.index > 0 ? "+" : "";
+      return `<div class="mood-src">
+        <div class="row"><span class="name">${escapeHtml(s.name)}</span>
+          <span class="idx ${cls}">${moodEmoji(s.index)} ${sign}${s.index}</span></div>
+        <div class="meter"><div class="mid"></div>${fill}</div>
+        <div class="counts">${s.count} headlines · 😨 ${s.fearLeaning} · 🌱 ${s.hopeLeaning} · 😐 ${s.neutral}</div>
+      </div>`;
+    }).join("");
+
+    const item = (x) => {
+      const cls = moodClass(x.index);
+      const words = [...x.fearWords.map((w) => `😨 ${w}`), ...x.hopeWords.map((w) => `🌱 ${w}`)].join(" · ");
+      return `<a class="mood-item" href="${escapeAttr(x.link)}" target="_blank" rel="noopener">
+        <span class="story-title">${escapeHtml(x.title)}</span>
+        <span class="chip ${cls}">${x.index > 0 ? "+" : ""}${x.index}</span>
+        <div class="story-meta"><span class="src">${escapeHtml(x.source)}</span></div>
+        ${words ? `<div class="words">${escapeHtml(words)}</div>` : ""}
+      </a>`;
+    };
+
+    body.innerHTML = `
+      <div class="mood-sources">${srcHtml}</div>
+      <div class="mood-cols">
+        <div class="mood-col"><h3>Most fearful</h3>
+          ${data.fearful.length ? data.fearful.map(item).join("") : '<p class="muted">None today.</p>'}</div>
+        <div class="mood-col"><h3>Most hopeful</h3>
+          ${data.hopeful.length ? data.hopeful.map(item).join("") : '<p class="muted">None today.</p>'}</div>
+      </div>`;
+  } catch (e) {
+    body.innerHTML = `<p class="error">Couldn't score headlines: ${escapeHtml(e.message)}</p>`;
+  }
+}
+
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -149,10 +203,11 @@ $("city-form").addEventListener("submit", (e) => {
 });
 
 async function refreshAll() {
-  await Promise.all([loadWeather(), loadTasks(), loadNews()]);
+  await Promise.all([loadWeather(), loadTasks(), loadNews(), loadMood()]);
 }
 $("refresh-all").addEventListener("click", refreshAll);
 $("refresh-tasks").addEventListener("click", loadTasks);
+$("refresh-mood").addEventListener("click", loadMood);
 
 renderDateline();
 $("city-input").placeholder = state.city;
