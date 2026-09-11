@@ -391,6 +391,10 @@ const NEGATORS = new Set(
    "shouldn't", "wouldn't", "hasn't", "haven't", "hadn't"]
 );
 
+// Reviewed and rejected as mood signals (research 2026-09-11): topic words
+// that drift with the news cycle rather than carrying stable affect.
+const EXCLUDED_WORDS = new Set(["fire", "ukraine", "case", "finds"]);
+
 // pessimism / optimism: tuned for tech headlines (Hacker News)
 const PESSIMISM_WORDS = new Set(
   ("doom doomed gloom gloomy dying dead decline declines declining declined fail fails " +
@@ -412,7 +416,7 @@ const OPTIMISM_WORDS = new Set(
     "opportunities progress innovative innovation revolution revolutionary delightful fun " +
     "cool neat clever brilliant genius milestone success successful thriving boom golden " +
     "renaissance shipped shipping launched launch release released debut fix fixed fixes " +
-    "solve solved free").split(" ")
+    "solve solved free trust trusted").split(" ")
 );
 
 interface Spectrum {
@@ -474,6 +478,7 @@ function scoreHeadline(title: string, link: string, source: string, sp: Spectrum
   const posHits: string[] = [];
   tokens.forEach((raw, i) => {
     const word = raw.replace(/^'+|'+$/g, "");
+    if (EXCLUDED_WORDS.has(word)) return;
     let kind: "neg" | "pos" | null = null;
     if (sp.negWords.has(word)) kind = "neg";
     else if (sp.posWords.has(word)) kind = "pos";
@@ -490,6 +495,9 @@ function scoreHeadline(title: string, link: string, source: string, sp: Spectrum
     }
   });
   const total = neg + pos;
+  const raw = total === 0 ? 0 : Math.round((100 * (pos - neg)) / total);
+  // A single matched word swings the full ±100; cap at ±50 to cut day-to-day noise.
+  const index = total === 1 ? Math.max(-50, Math.min(50, raw)) : raw;
   return {
     title,
     link,
@@ -499,7 +507,7 @@ function scoreHeadline(title: string, link: string, source: string, sp: Spectrum
     posEmoji: sp.posEmoji,
     neg,
     pos,
-    index: total === 0 ? 0 : Math.round((100 * (pos - neg)) / total),
+    index,
     negWords: [...new Set(negHits)].slice(0, 5),
     posWords: [...new Set(posHits)].slice(0, 5),
   };
