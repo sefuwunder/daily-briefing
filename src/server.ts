@@ -199,6 +199,7 @@ interface NewsItem {
   link: string;
   source: string;
   pubDate: string;
+  description: string; // plain-text summary, used for geo filtering
 }
 
 function parseRss(xml: string, source: string): NewsItem[] {
@@ -215,14 +216,18 @@ function parseRss(xml: string, source: string): NewsItem[] {
     const pub =
       pick(body.match(/<pubDate>([\s\S]*?)<\/pubDate>/i)) ||
       pick(body.match(/<(published|updated)>([\s\S]*?)<\/(published|updated)>/i));
-    if (title && link) items.push({ title, link, source, pubDate: pub });
+    const desc =
+      pick(body.match(/<description[^>]*>([\s\S]*?)<\/description>/i)) ||
+      pick(body.match(/<summary[^>]*>([\s\S]*?)<\/summary>/i));
+    if (title && link) items.push({ title, link, source, pubDate: pub, description: desc });
   }
   return items;
 }
 
 async function loadFeedItems(
   feeds: { source: string; url: string }[],
-  limit: number
+  limit: number,
+  filter?: (item: NewsItem) => boolean
 ): Promise<NewsItem[]> {
   const settled = await Promise.allSettled(
     feeds.map(async (f) => {
@@ -236,6 +241,7 @@ async function loadFeedItems(
   for (const s of settled) {
     if (s.status !== "fulfilled") continue;
     for (const item of s.value) {
+      if (filter && !filter(item)) continue;
       if (seen.has(item.link)) continue;
       seen.add(item.link);
       merged.push(item);
@@ -245,16 +251,92 @@ async function loadFeedItems(
   return merged.slice(0, limit);
 }
 
+// ---------------------------------------------------------------------------
+// geographic filtering for art items: keep only items related to the areas
+// of interest (matched against title + description, word-boundary aware)
+// ---------------------------------------------------------------------------
+
+const REGION_KEYWORDS: Record<string, string[]> = {
+  caricom: [
+    "caribbean", "west indies", "caricom",
+    "antigua", "barbuda", "bahamas", "barbados", "belize", "dominica",
+    "grenada", "guyana", "haiti", "jamaica", "montserrat", "nevis",
+    "suriname", "trinidad", "tobago",
+    "saint kitts", "st kitts", "st. kitts",
+    "saint lucia", "st lucia", "st. lucia",
+    "saint vincent", "st vincent", "st. vincent",
+    "jamaican", "barbadian", "bajan", "trinidadian", "tobagonian",
+    "guyanese", "haitian", "bahamian", "grenadian",
+    "kingston", "bridgetown", "port of spain", "port-au-prince", "nassau",
+    "paramaribo", "castries", "roseau", "basseterre", "kingstown",
+  ],
+  africa: [
+    "africa", "african",
+    "algeria", "angola", "benin", "botswana", "burkina faso", "burundi",
+    "cameroon", "cape verde", "cabo verde", "central african republic",
+    "chad", "comoros", "congo", "djibouti", "egypt", "equatorial guinea",
+    "eritrea", "eswatini", "ethiopia", "gabon", "gambia", "ghana", "guinea",
+    "guinea-bissau", "ivory coast", "kenya", "lesotho", "liberia", "libya",
+    "madagascar", "malawi", "mali", "mauritania", "mauritius", "morocco",
+    "mozambique", "namibia", "niger", "nigeria", "rwanda", "senegal",
+    "seychelles", "sierra leone", "somalia", "south africa", "south sudan",
+    "sudan", "tanzania", "togo", "tunisia", "uganda", "zambia", "zimbabwe",
+    "nigerian", "kenyan", "ghanaian", "ethiopian", "senegalese", "egyptian",
+    "moroccan", "south african", "malian", "congolese",
+    "lagos", "nairobi", "cairo", "johannesburg", "accra", "dakar",
+    "kinshasa", "addis ababa", "abuja", "casablanca", "cape town",
+    "dar es salaam", "abidjan",
+  ],
+  easteurope: [
+    "eastern europe", "baltic", "balkans", "soviet",
+    "ukraine", "ukrainian", "belarus", "belarusian", "moldova", "moldovan",
+    "poland", "polish", "romania", "romanian", "hungary", "hungarian",
+    "czechia", "czech", "slovakia", "slovak", "bulgaria", "bulgarian",
+    "serbia", "serbian", "croatia", "croatian", "bosnia", "bosnian",
+    "herzegovina", "albania", "albanian", "macedonia", "montenegro",
+    "kosovo", "slovenia", "slovenian", "lithuania", "lithuanian",
+    "latvia", "latvian", "estonia", "estonian",
+    "kyiv", "kiev", "lviv", "odesa", "odessa", "warsaw", "krakow",
+    "bucharest", "budapest", "prague", "belgrade", "sofia", "zagreb",
+    "vilnius", "riga", "tallinn", "chisinau", "minsk", "sarajevo",
+    "skopje", "tirana", "pristina",
+  ],
+};
+
+const REGION_PATTERNS = new Map<string, RegExp>();
+function regionPattern(region: string): RegExp {
+  let p = REGION_PATTERNS.get(region);
+  if (!p) {
+    const alt = REGION_KEYWORDS[region]
+      .map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+      .join("|");
+    p = new RegExp(`\\b(${alt})\\b`, "i");
+    REGION_PATTERNS.set(region, p);
+  }
+  return p;
+}
+
+function matchesRegion(text: string, region: string): boolean {
+  const kws = REGION_KEYWORDS[region];
+  if (!kws) return false;
+  return regionPattern(region).test(text);
+}
+
 async function handleNews(url: URL): Promise<Response> {
   const region = url.searchParams.get("region") || "caricom";
   const feeds = FEEDS[region];
   if (!feeds) return json({ error: "Unknown region" }, 400);
 
   const data = await cached(`news:${region}`, 20 * 60 * 1000, async () => {
+    // art items are filtered to the geographic areas of interest; the global
+    // art tab accepts items matching any of the three regions
+    const artsRegions = region === "artdiy" ? ["caricom", "africa", "easteurope"] : [region];
+    const artsFilter = (item: NewsItem) =>
+      artsRegions.some((r) => matchesRegion(`${item.title} ${item.description}`, r));
     const [items, arts] = await Promise.all([
       loadFeedItems(feeds, 15),
       // the global art tab has no regional headlines — give its feeds more room
-      loadFeedItems(ARTS_FEEDS[region] || [], region === "artdiy" ? 16 : 8),
+      loadFeedItems(ARTS_FEEDS[region] || [], region === "artdiy" ? 16 : 8, artsFilter),
     ]);
     return {
       region,

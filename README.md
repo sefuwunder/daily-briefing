@@ -20,6 +20,9 @@ The heading, greeting, and accent theme shift with the time of day
     arts: Bird In Flight, Lossi 36
   - *🎨 Art & DIY* (global): Neural, Hyperallergic, We Make Money Not Art,
     Furtherfield — the closest working feeds to Rhizome / e-flux territory
+  Art items are geo-filtered: only stories mentioning the areas of interest
+  (matched against title + summary) are pulled — each regional tab shows its
+  own region's art, and the Art & DIY tab shows items matching any of them.
   Headlines carry a ☆ bookmark button; saved stories collect in a foldable
   🔖 Bookmarks section (kept in your browser). The arts block also links out
   to [Rhizome](https://rhizome.org) and [e-flux](https://www.e-flux.com) for
