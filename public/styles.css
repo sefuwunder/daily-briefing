@@ -115,6 +115,7 @@ body {
 .grid > .card:nth-child(2) { animation-delay: 0.07s; }
 .grid > .card:nth-child(3) { animation-delay: 0.14s; }
 .grid > .card:nth-child(4) { animation-delay: 0.21s; }
+.grid > .card:nth-child(5) { animation-delay: 0.28s; }
 
 @keyframes rise {
   from { opacity: 0; transform: translateY(14px); }
@@ -293,21 +294,47 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
+.story-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 2px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+}
+.story-row:last-child { border-bottom: none; }
 .story {
+  flex: 1;
+  min-width: 0;
   display: block;
   padding: 11px 8px;
-  border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
   border-radius: 8px;
   text-decoration: none;
   color: var(--text);
   transition: background 0.2s ease;
 }
-.story:last-child { border-bottom: none; }
 .story:hover { background: rgba(255, 255, 255, 0.04); }
 .story:hover .story-title { color: var(--accent); }
 .story-title { font-size: 14.5px; line-height: 1.5; font-weight: 550; letter-spacing: -0.008em; transition: color 0.2s ease; }
 .story-meta { color: var(--muted); font-size: 12.5px; margin-top: 4px; display: flex; gap: 8px; }
 .story-meta .src { color: var(--accent); font-weight: 600; }
+
+/* bookmark toggle on each story */
+.bm-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font);
+  font-size: 17px;
+  line-height: 1;
+  padding: 12px 9px;
+  color: var(--muted);
+  opacity: 0.45;
+  flex-shrink: 0;
+  transition: opacity 0.2s ease, color 0.2s ease, transform 0.15s ease;
+}
+.story-row:hover .bm-btn { opacity: 0.9; }
+.bm-btn:hover { transform: scale(1.18); color: var(--accent); opacity: 1; }
+.bm-btn:active { transform: scale(0.94); }
+.bm-btn.saved { opacity: 1; color: var(--accent); }
 
 .arts-head {
   margin: 18px 0 2px;
@@ -317,6 +344,24 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.8px;
 }
+
+.arts-more { font-size: 12.5px; margin: 12px 0 2px; }
+.arts-more a { color: var(--accent); font-weight: 600; text-decoration: none; }
+.arts-more a:hover { text-decoration: underline; }
+
+/* bookmarks — foldable reading list */
+.bookmarks { grid-column: span 12; }
+.fold-head { cursor: pointer; user-select: none; margin-bottom: 0; border-radius: 8px; }
+.fold-head:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fold-head .chev {
+  color: var(--muted);
+  font-size: 15px;
+  transition: transform 0.25s ease;
+}
+.fold-head[aria-expanded="true"] .chev { transform: rotate(180deg); }
+#bm-body { margin-top: 6px; }
+#bm-body[hidden] { display: none; }
+#bm-list .story { padding: 10px 8px; }
 
 .foot {
   max-width: 1280px;

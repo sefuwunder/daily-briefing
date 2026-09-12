@@ -18,6 +18,10 @@ The heading, greeting, and accent theme shift with the time of day
   - *Africa*: BBC Africa — arts: The NATIVE, Music In Africa
   - *Eastern Europe*: BBC Europe, Kyiv Independent —
     arts: Bird In Flight, Lossi 36
+  Headlines carry a ☆ bookmark button; saved stories collect in a foldable
+  🔖 Bookmarks section (kept in your browser). The arts block also links out
+  to [Rhizome](https://rhizome.org) and [e-flux](https://www.e-flux.com) for
+  deeper DIY / net-art reading.
 - **Tasks** — outstanding tasks from your ClickUp list (completed ones are
   hidden), with priority dots and due-date pills.
 - **Headline mood** — linguistic scoring of the day's Hacker News front page

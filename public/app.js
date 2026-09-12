@@ -8,6 +8,34 @@ const state = {
   geoTried: false, // only hit the IP lookup once per page load
 };
 
+// ---- bookmarks (localStorage reading list) ----
+const BM_KEY = "briefing_bookmarks";
+const BM_OPEN_KEY = "briefing_bm_open";
+function getBookmarks() {
+  try { return JSON.parse(localStorage.getItem(BM_KEY)) || []; }
+  catch { return []; }
+}
+function saveBookmarks(bm) {
+  try { localStorage.setItem(BM_KEY, JSON.stringify(bm.slice(0, 100))); } catch {}
+}
+function isBookmarked(link) {
+  return getBookmarks().some((b) => b.link === link);
+}
+function toggleBookmark(entry) {
+  const bm = getBookmarks();
+  const i = bm.findIndex((b) => b.link === entry.link);
+  if (i >= 0) bm.splice(i, 1);
+  else bm.unshift({ title: entry.title, link: entry.link, source: entry.source, savedAt: Date.now() });
+  saveBookmarks(bm);
+  renderBookmarks();
+}
+function setBmBtn(btn, on) {
+  btn.classList.toggle("saved", on);
+  btn.textContent = on ? "★" : "☆";
+  btn.title = on ? "Remove bookmark" : "Bookmark this story";
+  btn.setAttribute("aria-pressed", String(on));
+}
+
 // ---- daypart heading + theme ----
 const DAYPARTS = {
   morning:   { emoji: "☀️", title: "Morning Briefing",   greet: "Good morning" },
@@ -160,15 +188,27 @@ async function loadNews() {
       body.innerHTML = `<p class="muted">No headlines right now.</p>`;
       return;
     }
-    const storyHtml = (s) => `
-      <a class="story" href="${escapeAttr(s.link)}" target="_blank" rel="noopener">
-        <div class="story-title">${escapeHtml(s.title)}</div>
-        <div class="story-meta"><span class="src">${escapeHtml(s.source)}</span>
-          <span>${timeAgo(s.pubDate)}</span></div>
-      </a>`;
+    const storyHtml = (s) => {
+      const saved = isBookmarked(s.link);
+      return `
+      <div class="story-row">
+        <a class="story" href="${escapeAttr(s.link)}" target="_blank" rel="noopener">
+          <div class="story-title">${escapeHtml(s.title)}</div>
+          <div class="story-meta"><span class="src">${escapeHtml(s.source)}</span>
+            <span>${timeAgo(s.pubDate)}</span></div>
+        </a>
+        <button class="bm-btn${saved ? " saved" : ""}" data-link="${escapeAttr(s.link)}"
+          data-title="${escapeAttr(s.title)}" data-source="${escapeAttr(s.source)}"
+          title="${saved ? "Remove bookmark" : "Bookmark this story"}"
+          aria-label="Bookmark this story" aria-pressed="${saved}">${saved ? "★" : "☆"}</button>
+      </div>`;
+    };
     const artsHtml = (data.arts && data.arts.length)
       ? `<h3 class="arts-head">🎨 Underground arts &amp; culture</h3>` +
-        data.arts.map(storyHtml).join("")
+        data.arts.map(storyHtml).join("") +
+        `<p class="arts-more muted">More DIY &amp; net-art inspiration:
+          <a href="https://rhizome.org" target="_blank" rel="noopener">Rhizome</a> ·
+          <a href="https://www.e-flux.com" target="_blank" rel="noopener">e-flux</a></p>`
       : "";
     body.innerHTML = data.items.map(storyHtml).join("") + artsHtml;
     body.classList.remove("swap-in");
@@ -234,6 +274,34 @@ async function loadMood() {
   }
 }
 
+// ---- bookmarks section ----
+function renderBookmarks() {
+  const bm = getBookmarks();
+  $("bm-count").textContent = bm.length ? `${bm.length}` : "";
+  const list = $("bm-list");
+  if (!bm.length) {
+    list.innerHTML = `<p class="muted">Nothing saved yet — tap ☆ on any headline to keep it here.</p>`;
+    return;
+  }
+  const date = (ts) => new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  list.innerHTML = bm.map((b) => `
+    <div class="story-row">
+      <a class="story" href="${escapeAttr(b.link)}" target="_blank" rel="noopener">
+        <div class="story-title">${escapeHtml(b.title)}</div>
+        <div class="story-meta"><span class="src">${escapeHtml(b.source)}</span>
+          <span>saved ${date(b.savedAt)}</span></div>
+      </a>
+      <button class="bm-btn saved" data-link="${escapeAttr(b.link)}" title="Remove bookmark"
+        aria-label="Remove bookmark" aria-pressed="true">★</button>
+    </div>`).join("");
+}
+
+function setBmOpen(open) {
+  $("bm-body").hidden = !open;
+  $("bm-fold").setAttribute("aria-expanded", String(open));
+  try { localStorage.setItem(BM_OPEN_KEY, open ? "1" : "0"); } catch {}
+}
+
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -250,6 +318,30 @@ document.querySelectorAll(".tab").forEach((tab) => {
     state.newsRegion = tab.dataset.region;
     loadNews();
   });
+});
+
+// bookmark toggles in the news feed (event delegation — stories re-render)
+$("news-body").addEventListener("click", (e) => {
+  const btn = e.target.closest(".bm-btn");
+  if (!btn) return;
+  toggleBookmark({ title: btn.dataset.title, link: btn.dataset.link, source: btn.dataset.source });
+  setBmBtn(btn, isBookmarked(btn.dataset.link));
+});
+
+// bookmark removal inside the bookmarks section
+$("bm-list").addEventListener("click", (e) => {
+  const btn = e.target.closest(".bm-btn");
+  if (!btn) return;
+  toggleBookmark({ title: "", link: btn.dataset.link, source: "" });
+});
+
+// foldable bookmarks section
+$("bm-fold").addEventListener("click", () => setBmOpen($("bm-body").hidden));
+$("bm-fold").addEventListener("keydown", (e) => {
+  if (e.key === "Enter" || e.key === " ") {
+    e.preventDefault();
+    setBmOpen($("bm-body").hidden);
+  }
 });
 
 $("city-form").addEventListener("submit", (e) => {
@@ -287,6 +379,8 @@ $("refresh-mood").addEventListener("click", (e) => spinWhile(e.currentTarget, lo
 
 applyDaypart();
 $("city-input").placeholder = state.city || "City…";
+renderBookmarks();
+setBmOpen(localStorage.getItem(BM_OPEN_KEY) === "1");
 refreshAll();
 setInterval(refreshAll, 15 * 60 * 1000);
 setInterval(applyDaypart, 5 * 60 * 1000); // flip heading/theme when the daypart changes
