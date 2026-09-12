@@ -4,7 +4,7 @@
   --card-2: #1d232b;
   --border: #2a323c;
   --text: #e8e6df;
-  --muted: #9aa3ad;
+  --muted: #c2c7cd; /* lifted so secondary text stays legible on the brighter background */
   --accent: #f0b429;
   --accent-soft: color-mix(in srgb, var(--accent) 12%, transparent);
   --green: #4ade80;
@@ -56,10 +56,12 @@ body[data-daypart="night"] {
 
 body {
   margin: 0;
+  /* Each background layer is mixed 30% toward white so the page reads
+     brighter while the daypart themes and their crossfades keep working. */
   background:
-    radial-gradient(1200px 600px at 20% -10%, var(--glow) 0%, transparent 60%),
-    radial-gradient(1000px 520px at 90% 110%, var(--horizon) 0%, transparent 55%),
-    var(--bg);
+    radial-gradient(1200px 600px at 20% -10%, color-mix(in srgb, var(--glow) 70%, white) 0%, transparent 60%),
+    radial-gradient(1000px 520px at 90% 110%, color-mix(in srgb, var(--horizon) 70%, white) 0%, transparent 55%),
+    color-mix(in srgb, var(--bg) 70%, white);
   background-attachment: fixed;
   transition: --glow 3s ease, --horizon 3s ease, --bg 3s ease;
   color: var(--text);
