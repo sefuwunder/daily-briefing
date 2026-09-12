@@ -171,6 +171,9 @@ async function loadNews() {
         data.arts.map(storyHtml).join("")
       : "";
     body.innerHTML = data.items.map(storyHtml).join("") + artsHtml;
+    body.classList.remove("swap-in");
+    void body.offsetWidth; // restart the fade each time headlines render
+    body.classList.add("swap-in");
     $("updated").textContent =
       `News updated ${new Date(data.updated).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`;
   } catch (e) {
@@ -269,12 +272,18 @@ $("locate-btn").addEventListener("click", () => {
   loadWeather();
 });
 
+// Spin a refresh button while its loader runs.
+async function spinWhile(btn, fn) {
+  btn.classList.add("spinning");
+  try { await fn(); } finally { btn.classList.remove("spinning"); }
+}
+
 async function refreshAll() {
   await Promise.all([loadWeather(), loadTasks(), loadNews(), loadMood()]);
 }
-$("refresh-all").addEventListener("click", refreshAll);
-$("refresh-tasks").addEventListener("click", loadTasks);
-$("refresh-mood").addEventListener("click", loadMood);
+$("refresh-all").addEventListener("click", (e) => spinWhile(e.currentTarget, refreshAll));
+$("refresh-tasks").addEventListener("click", (e) => spinWhile(e.currentTarget, loadTasks));
+$("refresh-mood").addEventListener("click", (e) => spinWhile(e.currentTarget, loadMood));
 
 applyDaypart();
 $("city-input").placeholder = state.city || "City…";
