@@ -18,6 +18,8 @@ The heading, greeting, and accent theme shift with the time of day
   - *Africa*: BBC Africa — arts: The NATIVE, Music In Africa
   - *Eastern Europe*: BBC Europe, Kyiv Independent —
     arts: Bird In Flight, Lossi 36
+  - *🎨 Art & DIY* (global): Neural, Hyperallergic, We Make Money Not Art,
+    Furtherfield — the closest working feeds to Rhizome / e-flux territory
   Headlines carry a ☆ bookmark button; saved stories collect in a foldable
   🔖 Bookmarks section (kept in your browser). The arts block also links out
   to [Rhizome](https://rhizome.org) and [e-flux](https://www.e-flux.com) for

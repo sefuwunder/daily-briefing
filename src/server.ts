@@ -137,12 +137,15 @@ const FEEDS: Record<string, { source: string; url: string }[]> = {
     { source: "BBC Europe", url: "https://feeds.bbci.co.uk/news/world/europe/rss.xml" },
     { source: "Kyiv Independent", url: "https://kyivindependent.com/news-archive/rss/" },
   ],
+  // global art/DIY tab — no regional headlines, just the arts block
+  artdiy: [],
 };
 
 const REGION_LABELS: Record<string, string> = {
   caricom: "CARICOM",
   africa: "Africa",
   easteurope: "Eastern Europe",
+  artdiy: "🎨 Art & DIY",
 };
 
 // indie / DIY / underground arts & culture feeds per region
@@ -159,6 +162,15 @@ const ARTS_FEEDS: Record<string, { source: string; url: string }[]> = {
   easteurope: [
     { source: "Bird In Flight", url: "https://birdinflight.com/feed" },
     { source: "Lossi 36", url: "https://lossi36.com/feed/" },
+  ],
+  // global underground art / DIY / net-art — Rhizome & e-flux kin
+  // (both sites block feed fetching, so these are the closest working feeds;
+  // the arts block links out to rhizome.org and e-flux.com directly)
+  artdiy: [
+    { source: "Neural", url: "https://neural.it/feed/" },
+    { source: "Hyperallergic", url: "https://hyperallergic.com/feed/" },
+    { source: "We Make Money Not Art", url: "https://we-make-money-not-art.com/feed/" },
+    { source: "Furtherfield", url: "https://www.furtherfield.org/feed/" },
   ],
 };
 
@@ -241,7 +253,8 @@ async function handleNews(url: URL): Promise<Response> {
   const data = await cached(`news:${region}`, 20 * 60 * 1000, async () => {
     const [items, arts] = await Promise.all([
       loadFeedItems(feeds, 15),
-      loadFeedItems(ARTS_FEEDS[region] || [], 8),
+      // the global art tab has no regional headlines — give its feeds more room
+      loadFeedItems(ARTS_FEEDS[region] || [], region === "artdiy" ? 16 : 8),
     ]);
     return {
       region,
