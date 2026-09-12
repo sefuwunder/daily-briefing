@@ -391,9 +391,14 @@ const NEGATORS = new Set(
    "shouldn't", "wouldn't", "hasn't", "haven't", "hadn't"]
 );
 
-// Reviewed and rejected as mood signals (research 2026-09-11): topic words
-// that drift with the news cycle rather than carrying stable affect.
-const EXCLUDED_WORDS = new Set(["fire", "ukraine", "case", "finds"]);
+// Reviewed and rejected as mood signals: topic words that drift with the
+// news cycle rather than carrying stable affect.
+// 2026-09-11: fire, ukraine, case, finds.
+// 2026-09-12: google, programming, show, engine, visits, trump, see, ireland, sweden.
+const EXCLUDED_WORDS = new Set([
+  "fire", "ukraine", "case", "finds",
+  "google", "programming", "show", "engine", "visits", "trump", "see", "ireland", "sweden",
+]);
 
 // pessimism / optimism: tuned for tech headlines (Hacker News)
 const PESSIMISM_WORDS = new Set(
@@ -485,7 +490,9 @@ function scoreHeadline(title: string, link: string, source: string, sp: Spectrum
     if (!kind) return;
     const prev = tokens.slice(Math.max(0, i - 2), i).map((t) => t.replace(/^'+|'+$/g, ""));
     const negated = prev.some((t) => NEGATORS.has(t) || t.endsWith("n't"));
-    if (negated) kind = kind === "neg" ? "pos" : "neg";
+    // Negators neutralize valence rather than flipping polarity
+    // (Polanyi & Zaenen 2006: "not a failure" is neutral, not positive).
+    if (negated) return;
     if (kind === "neg") {
       neg++;
       negHits.push(word);
