@@ -171,6 +171,7 @@ const ARTS_FEEDS: Record<string, { source: string; url: string }[]> = {
     { source: "Hyperallergic", url: "https://hyperallergic.com/feed/" },
     { source: "We Make Money Not Art", url: "https://we-make-money-not-art.com/feed/" },
     { source: "Furtherfield", url: "https://www.furtherfield.org/feed/" },
+    { source: "DIY Conspiracy", url: "https://diyconspiracy.net/feed/" },
   ],
 };
 
@@ -451,7 +452,7 @@ const FEAR_WORDS = new Set(
     "panic panicked terror terrorist terrorists terrorism terrified terrifying crash crashed crashing " +
     "emergency alarm alarming alarmed dread dreaded catastrophe catastrophic disaster disastrous " +
     "violence violent violently outbreak shortage shortages recession inflation doom doomed " +
-    "nightmare horror horrible hostage hostages missile missiles bomb bombs bombing bombings " +
+    "nightmare horror horrible hell hostage hostages missile missiles bomb bombs bombing bombings " +
     "sanction sanctions conflict conflicts clash clashes clashed unrest riot riots evacuate " +
     "evacuated evacuation evacuations casualty casualties wounded airstrike airstrikes invasion " +
     "invade invaded nuclear meltdown hack hacked hacking breach breached scam scams fraud " +
@@ -490,9 +491,11 @@ const NEGATORS = new Set(
 // news cycle rather than carrying stable affect.
 // 2026-09-11: fire, ukraine, case, finds.
 // 2026-09-12: google, programming, show, engine, visits, trump, see, ireland, sweden.
+// 2026-09-13: happened (the "as it happened" live-blog marker).
 const EXCLUDED_WORDS = new Set([
   "fire", "ukraine", "case", "finds",
   "google", "programming", "show", "engine", "visits", "trump", "see", "ireland", "sweden",
+  "happened",
 ]);
 
 // pessimism / optimism: tuned for tech headlines (Hacker News)
