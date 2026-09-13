@@ -257,6 +257,25 @@ async function loadFeedItems(
 // of interest (matched against title + description, word-boundary aware)
 // ---------------------------------------------------------------------------
 
+const ART_ITEMS_FILE = new URL("../data/art_items.json", import.meta.url).pathname;
+
+interface CuratedArtItem extends NewsItem {
+  regions: string[];
+}
+
+// Hand-picked arts items the RSS geo filter would miss (e.g. the region
+// mention only appears in the full article, not the feed summary).
+// Each entry is reviewed before being added; the file is merged into the
+// arts arrays by the same region filter the feeds use.
+async function loadCuratedArt(): Promise<CuratedArtItem[]> {
+  try {
+    const raw = await Bun.file(ART_ITEMS_FILE).json();
+    return Array.isArray(raw) ? raw : [];
+  } catch {
+    return [];
+  }
+}
+
 const REGION_KEYWORDS: Record<string, string[]> = {
   caricom: [
     "caribbean", "west indies", "caricom",
@@ -334,11 +353,17 @@ async function handleNews(url: URL): Promise<Response> {
     const artsRegions = region === "artdiy" ? ["caricom", "africa", "easteurope"] : [region];
     const artsFilter = (item: NewsItem) =>
       artsRegions.some((r) => matchesRegion(`${item.title} ${item.description}`, r));
-    const [items, arts] = await Promise.all([
+    const [items, feedArts] = await Promise.all([
       loadFeedItems(feeds, 15),
       // the global art tab has no regional headlines — give its feeds more room
       loadFeedItems(ARTS_FEEDS[region] || [], region === "artdiy" ? 16 : 8, artsFilter),
     ]);
+    // merge in hand-picked art items, newest first, without duplicating feed links
+    const curated = (await loadCuratedArt()).filter(
+      (c) => c.regions.some((r) => artsRegions.includes(r)) && artsFilter(c)
+    );
+    const seenLinks = new Set(feedArts.map((a) => a.link));
+    const arts = [...curated.filter((c) => !seenLinks.has(c.link)), ...feedArts];
     return {
       region,
       label: REGION_LABELS[region],
