@@ -86,7 +86,7 @@ async function handleWeather(url: URL): Promise<Response> {
     const r = await fetchWithTimeout(
       `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
       `&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m` +
-      `&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=6`
+      `&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset&timezone=auto&forecast_days=6`
     );
     if (!r.ok) throw new Error("weather fetch failed");
     return r.json();
@@ -117,6 +117,10 @@ async function handleWeather(url: URL): Promise<Response> {
       icon,
     },
     daily,
+    sun: {
+      sunrise: w.daily.sunrise[0],
+      sunset: w.daily.sunset[0],
+    },
   });
 }
 

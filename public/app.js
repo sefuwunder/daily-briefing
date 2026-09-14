@@ -122,10 +122,136 @@ async function loadWeather() {
           💧 ${c.humidity}% · 💨 ${c.wind_kph} km/h${geoNote}</div>
         </div>
       </div>
-      <div class="wx-days">${days}</div>`;
+      <div class="wx-days">${days}</div>
+      <div class="sky" id="sky-body" aria-label="Sun and moon tracker"></div>`;
+    renderSky(w.sun);
   } catch (e) {
     body.innerHTML = `<p class="error">Couldn't load weather: ${escapeHtml(e.message)}</p>`;
   }
+}
+
+// ---- sun & moon tracker ----
+const SYNODIC_MONTH = 29.530588853; // days
+const REF_NEW_MOON = Date.UTC(2000, 0, 6, 18, 14); // a known new moon
+let skyTimer = null;
+let moonIconSeq = 0;
+
+function moonPhase(date) {
+  const days = (date.getTime() - REF_NEW_MOON) / 86400000;
+  const p = ((((days % SYNODIC_MONTH) + SYNODIC_MONTH) % SYNODIC_MONTH)) / SYNODIC_MONTH;
+  const illum = Math.round(((1 - Math.cos(2 * Math.PI * p)) / 2) * 100);
+  const names = ["New Moon", "Waxing Crescent", "First Quarter", "Waxing Gibbous",
+                 "Full Moon", "Waning Gibbous", "Last Quarter", "Waning Crescent"];
+  return { phase: p, illum, name: names[Math.floor(p * 8 + 0.5) % 8] };
+}
+
+// Moon disc with a geometrically correct terminator: the lit limb is on the
+// right while waxing, on the left while waning; the terminator bulges toward
+// the lit side for crescents and away for gibbous phases.
+function moonIcon(p, size) {
+  const R = 15, C = 20;
+  const q = 2 * Math.PI * p;
+  const rx = Math.max(0.4, R * Math.abs(Math.cos(q)));
+  const waxing = p < 0.5;
+  const crescent = Math.cos(q) > 0;
+  const limbSweep = waxing ? 1 : 0;
+  const termSweep = waxing ? (crescent ? 0 : 1) : (crescent ? 1 : 0);
+  const id = "mpi" + (++moonIconSeq);
+  return `<svg viewBox="0 0 40 40" width="${size}" height="${size}" aria-hidden="true">` +
+    `<defs><clipPath id="${id}"><path d="M ${C} ${C - R} ` +
+    `A ${R} ${R} 0 0 ${limbSweep} ${C} ${C + R} ` +
+    `A ${rx.toFixed(2)} ${R} 0 0 ${termSweep} ${C} ${C - R} Z"/></clipPath></defs>` +
+    `<circle cx="${C}" cy="${C}" r="${R}" fill="#454b5c"/>` +
+    `<circle cx="${C}" cy="${C}" r="${R}" fill="#f2eee1" clip-path="url(#${id})"/></svg>`;
+}
+
+function fmtSunTime(iso) {
+  const d = new Date(iso);
+  return isNaN(d) ? "—" : d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+}
+
+function renderSky(sun) {
+  const host = $("sky-body");
+  if (skyTimer) { clearInterval(skyTimer); skyTimer = null; }
+  if (!host || !sun || !sun.sunrise || !sun.sunset) return;
+  const sr = new Date(sun.sunrise), ss = new Date(sun.sunset);
+  if (isNaN(sr) || isNaN(ss) || ss <= sr) return;
+
+  let stars = "";
+  for (let i = 0; i < 36; i++) {
+    const x = (Math.random() * 300).toFixed(1), y = (Math.random() * 108).toFixed(1);
+    const r = (0.6 + Math.random() * 1.1).toFixed(2);
+    stars += `<circle class="star" cx="${x}" cy="${y}" r="${r}" style="animation-delay:${(Math.random() * 4).toFixed(2)}s"/>`;
+  }
+  host.innerHTML = `
+    <svg class="sky-svg" viewBox="0 0 300 168" role="img" aria-label="Sun and moon arc">
+      <defs>
+        <linearGradient id="skyday" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#6ea8e8"/><stop offset="1" stop-color="#f7dcaa"/>
+        </linearGradient>
+        <linearGradient id="skynight" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#0a0f24"/><stop offset="1" stop-color="#2c3d63"/>
+        </linearGradient>
+        <radialGradient id="sunglow">
+          <stop offset="0" stop-color="#fff3c4" stop-opacity=".85"/><stop offset="1" stop-color="#ffd94d" stop-opacity="0"/>
+        </radialGradient>
+        <radialGradient id="moonglow">
+          <stop offset="0" stop-color="#dfe6ff" stop-opacity=".5"/><stop offset="1" stop-color="#dfe6ff" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <rect width="300" height="168" fill="url(#skyday)"/>
+      <rect class="night-sky" width="300" height="168" fill="url(#skynight)" opacity="0"/>
+      <g class="stars" opacity="0">${stars}</g>
+      <path d="M 20 148 A 130 130 0 0 1 280 148" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="1.5" stroke-dasharray="5 5"/>
+      <line x1="6" y1="148" x2="294" y2="148" stroke="rgba(255,255,255,.55)" stroke-width="1.5"/>
+      <g class="orb sun-orb"><circle class="halo" r="26" fill="url(#sunglow)"/><circle r="11" fill="#ffd94d"/></g>
+      <g class="orb moon-orb"><circle r="20" fill="url(#moonglow)"/><circle r="9" fill="#e9e4d6"/></g>
+    </svg>
+    <div class="sky-times">
+      <span>🌅 <b class="sky-sr"></b></span>
+      <span class="sky-now muted"></span>
+      <span><b class="sky-ss"></b> 🌇</span>
+    </div>
+    <div class="sky-moon"><span class="sky-moon-icon"></span><span class="sky-moon-label"></span></div>`;
+
+  host.querySelector(".sky-sr").textContent = fmtSunTime(sun.sunrise);
+  host.querySelector(".sky-ss").textContent = fmtSunTime(sun.sunset);
+  const mp = moonPhase(new Date());
+  host.querySelector(".sky-moon-icon").innerHTML = moonIcon(mp.phase, 30);
+  host.querySelector(".sky-moon-label").textContent = `${mp.name} · ${mp.illum}% lit`;
+
+  const CX = 150, CY = 148, R = 130;
+  const dayMs = ss - sr, nightMs = 86400000 - dayMs, twilightMs = 30 * 60000;
+  const place = (orb, frac) => {
+    const a = Math.PI * (1 - Math.min(1, Math.max(0, frac)));
+    orb.setAttribute("transform", `translate(${(CX + R * Math.cos(a)).toFixed(1)} ${(CY - R * Math.sin(a)).toFixed(1)})`);
+  };
+  const tick = () => {
+    const now = new Date();
+    const isDay = now >= sr && now <= ss;
+    const sunOrb = host.querySelector(".sun-orb"), moonOrb = host.querySelector(".moon-orb");
+    const nightSky = host.querySelector(".night-sky"), starsG = host.querySelector(".stars");
+    const nowLabel = host.querySelector(".sky-now");
+    let dayness;
+    if (isDay) {
+      place(sunOrb, (now - sr) / dayMs);
+      sunOrb.style.display = ""; moonOrb.style.display = "none";
+      dayness = 1;
+      nowLabel.textContent = `☀️ up · sets ${fmtSunTime(sun.sunset)}`;
+    } else {
+      let sinceSs = now - ss;
+      if (sinceSs < 0) sinceSs += 86400000; // after midnight, before sunrise
+      place(moonOrb, sinceSs / nightMs);
+      moonOrb.style.display = ""; sunOrb.style.display = "none";
+      const toRise = (sr - now + 86400000) % 86400000;
+      dayness = Math.max(0, 1 - Math.min(toRise, sinceSs) / twilightMs);
+      nowLabel.textContent = `🌙 up · rises ${fmtSunTime(sun.sunrise)}`;
+    }
+    nightSky.setAttribute("opacity", (1 - dayness).toFixed(2));
+    starsG.setAttribute("opacity", (1 - dayness).toFixed(2));
+  };
+  tick();
+  skyTimer = setInterval(tick, 30000);
 }
 
 // ---- tasks ----

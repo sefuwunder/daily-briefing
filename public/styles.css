@@ -211,6 +211,18 @@ body {
 .wx-day .t { font-weight: 700; font-variant-numeric: tabular-nums; }
 .wx-day .t span { color: var(--muted); font-weight: 400; }
 
+/* sun & moon tracker */
+.sky { margin-top: 14px; border-top: 1px solid color-mix(in srgb, var(--border) 65%, transparent); padding-top: 12px; }
+.sky-svg { width: 100%; height: auto; display: block; border-radius: 12px; }
+.sky-times { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 13px; }
+.sky-times b { font-variant-numeric: tabular-nums; }
+.sky-moon { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 13px; color: var(--muted); }
+.sky-moon-icon { display: inline-flex; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.45)); }
+.star { fill: #fff; animation: twinkle 3.2s ease-in-out infinite; }
+@keyframes twinkle { 0%, 100% { opacity: 0.25; } 50% { opacity: 0.9; } }
+.sun-orb .halo { animation: sunpulse 5s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
+@keyframes sunpulse { 0%, 100% { opacity: 0.85; } 50% { opacity: 1; } }
+
 .city-form { display: flex; gap: 6px; }
 .city-form input {
   background: rgba(0, 0, 0, 0.25);
