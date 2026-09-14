@@ -226,6 +226,35 @@ body {
 }
 .star { fill: #fff; animation: twinkle 3.2s ease-in-out infinite; }
 @keyframes twinkle { 0%, 100% { opacity: 0.25; } 50% { opacity: 0.9; } }
+
+/* tonight's sky — star map for 10 PM local, below the sun & moon tracker */
+.wx-top { flex-wrap: wrap; }
+.nightsky {
+  flex: 1 1 100%;
+  border-top: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
+  padding-top: 14px;
+  display: flex;
+  gap: 18px;
+  align-items: center;
+}
+.nightsky-canvas {
+  width: min(100%, 290px);
+  height: auto;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45), inset 0 0 40px rgba(20, 30, 80, 0.35);
+  flex: none;
+}
+.nightsky-side { min-width: 0; }
+.nightsky-title { font-weight: 700; font-size: 15px; letter-spacing: -0.01em; margin-bottom: 6px; }
+.nightsky-when { font-size: 13px; margin-bottom: 8px; }
+.nightsky-look { font-size: 13.5px; line-height: 1.65; color: var(--muted); }
+.nightsky-look b { color: var(--text); font-weight: 600; }
+.nightsky-note { font-size: 12px; margin-top: 8px; }
+@media (max-width: 520px) {
+  .nightsky { flex-direction: column; align-items: flex-start; }
+}
 .sun-orb .halo { animation: sunpulse 5s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
 @keyframes sunpulse { 0%, 100% { opacity: 0.85; } 50% { opacity: 1; } }
 

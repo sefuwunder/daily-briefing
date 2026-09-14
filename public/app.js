@@ -124,9 +124,11 @@ async function loadWeather() {
           </div>
         </div>
         <div class="sky" id="sky-body" aria-label="Sun and moon tracker"></div>
+        <div class="nightsky" id="nightsky-body" aria-label="Tonight's star map"></div>
       </div>
       <div class="wx-days">${days}</div>`;
     renderSky(w.sun);
+    renderNightSky(w);
   } catch (e) {
     body.innerHTML = `<p class="error">Couldn't load weather: ${escapeHtml(e.message)}</p>`;
   }
@@ -254,6 +256,39 @@ function renderSky(sun) {
   };
   tick();
   skyTimer = setInterval(tick, 30000);
+}
+
+// ---- tonight's sky (star map for 10 PM local) ----
+function renderNightSky(w) {
+  const host = $("nightsky-body");
+  if (!host || typeof SkyChart === "undefined") return;
+  const lat = Number(w.latitude), lon = Number(w.longitude);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+    host.innerHTML = `<p class="muted">Star map needs a location.</p>`;
+    return;
+  }
+  const when = SkyChart.tonightAt(w.timezone || "UTC", 22, new Date());
+  host.innerHTML = `
+    <canvas class="nightsky-canvas" width="600" height="600" role="img"
+      aria-label="Star chart for tonight at 10 PM"></canvas>
+    <div class="nightsky-side">
+      <div class="nightsky-title">🌌 Tonight's sky</div>
+      <div class="nightsky-when muted"></div>
+      <div class="nightsky-look"></div>
+      <div class="nightsky-note muted">N up · E right · zenith at center</div>
+    </div>`;
+  let info = { top3: [] };
+  try {
+    info = SkyChart.render(host.querySelector("canvas"), { lat, lon, date: when });
+  } catch (e) {
+    host.innerHTML = `<p class="muted">Couldn't draw the star map.</p>`;
+    return;
+  }
+  host.querySelector(".nightsky-when").textContent =
+    `Tonight 10:00 PM · ${w.place || "your sky"}`;
+  host.querySelector(".nightsky-look").innerHTML = info.top3.length
+    ? `Look for <b>${info.top3.map(escapeHtml).join("</b> · <b>")}</b>`
+    : `<span class="muted">Nothing bright above the horizon — check back later.</span>`;
 }
 
 // ---- tasks ----

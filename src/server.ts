@@ -107,6 +107,8 @@ async function handleWeather(url: URL): Promise<Response> {
 
   return json({
     place: name ? `${name}${country ? ", " + country : ""}` : `${lat}, ${lon}`,
+    latitude: Number(lat),
+    longitude: Number(lon),
     timezone: w.timezone,
     current: {
       temp_c: Math.round(c.temperature_2m),

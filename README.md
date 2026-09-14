@@ -11,6 +11,11 @@ The heading, greeting, and accent theme shift with the time of day
   needed). Uses your approximate location from your IP by default (looked up
   once per page load via ipapi.co); search any city to override, or hit 📍
   to go back to IP location. Your city choice is remembered.
+- **Tonight's sky** — a star map computed for 10:00 PM local time at your
+  weather location: the brightest stars overhead, stick figures and names
+  for the major constellations, and the three brightest stars to look for.
+  Positions come from a built-in 95-star catalog and are degree-level
+  accurate — fine for casual stargazing, not for navigation.
 - **News** — tabbed headlines, refreshed every 20 minutes. Each region gets
   a **🎨 Underground arts & culture** section with indie/DIY coverage:
   - *CARICOM*: Jamaica Observer, Barbados Today, St Lucia Times —
