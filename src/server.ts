@@ -486,8 +486,36 @@ const FEAR_WORDS = new Set(
     "earthquake hurricane tornado slaughter massacre kidnapped kidnapping assault murder " +
     "murdered suicide poison toxic lethal fatal fatalities grim bleak dire desperate desperation " +
     "chaos chaotic turmoil upheaval crackdown siege besieged coup curfew banned expel expelled " +
-    "deport tariff tariffs").split(" ")
+    // 2026-09-14: fugitive (research candidate — appeared twice, not excluded)
+    "deport tariff tariffs fugitive").split(" ")
 );
+
+// Graded intensity tiers (Reagan et al. 2017: continuum-scored words beat
+// binary valence). 1 = mild, 2 = strong (default for unlisted words),
+// 3 = extreme. research.py parses only the Set(...) blocks above, so these
+// tables are invisible to it.
+const FEAR_INTENSITY: Record<string, number> = {
+  // extreme: death, catastrophe, existential threat
+  deadly: 3, dead: 3, death: 3, deaths: 3, kill: 3, killed: 3, killing: 3, kills: 3,
+  terror: 3, terrorist: 3, terrorists: 3, terrorism: 3,
+  catastrophe: 3, catastrophic: 3, disaster: 3, disastrous: 3,
+  nightmare: 3, horror: 3, hell: 3,
+  missile: 3, missiles: 3, bomb: 3, bombs: 3, bombing: 3, bombings: 3,
+  airstrike: 3, airstrikes: 3, invasion: 3, invade: 3, invaded: 3,
+  nuclear: 3, meltdown: 3, plague: 3, epidemic: 3, pandemic: 3, famine: 3,
+  slaughter: 3, massacre: 3, kidnapped: 3, kidnapping: 3,
+  murder: 3, murdered: 3, suicide: 3, poison: 3, lethal: 3, fatal: 3, fatalities: 3,
+  earthquake: 3, hurricane: 3, tornado: 3, wildfire: 3, wildfires: 3,
+  // mild: hedged, procedural, or low-affect
+  warning: 1, warnings: 1, warn: 1, warned: 1,
+  risk: 1, risks: 1, risky: 1,
+  alarm: 1, alarming: 1, alarmed: 1,
+  shortage: 1, shortages: 1, inflation: 1,
+  sanction: 1, sanctions: 1, tariff: 1, tariffs: 1,
+  lawsuit: 1, probe: 1, probed: 1, scandal: 1, scandals: 1,
+  expel: 1, expelled: 1, banned: 1, curfew: 1, deport: 1,
+  hack: 1, hacked: 1, hacking: 1, breach: 1, breached: 1, scam: 1, scams: 1,
+};
 
 const HOPE_WORDS = new Set(
   ("hope hopes hoped hopeful breakthrough breakthroughs success successes successful " +
@@ -505,6 +533,20 @@ const HOPE_WORDS = new Set(
     "inspired inspiring inspiration hero heroes heroic generous generosity donate donated " +
     "charity kindness compassion mercy freedom liberty").split(" ")
 );
+
+const HOPE_INTENSITY: Record<string, number> = {
+  // extreme: rare, transformative wins
+  breakthrough: 3, breakthroughs: 3, triumph: 3, triumphant: 3,
+  victory: 3, victories: 3, victorious: 3, cure: 3, cured: 3, cures: 3,
+  // mild: soft or routine positives
+  hope: 1, hopes: 1, hoped: 1, hopeful: 1,
+  promise: 1, promises: 1, promised: 1, promising: 1,
+  bright: 1, brighter: 1,
+  approve: 1, approved: 1, approval: 1,
+  deal: 1, deals: 1, agreement: 1, agreements: 1, agreed: 1,
+  launch: 1, launches: 1, launched: 1, launching: 1,
+  record: 1, records: 1,
+};
 
 const NEGATORS = new Set(
   ["not", "no", "never", "neither", "none", "without", "cannot", "can't", "won't",
@@ -536,6 +578,15 @@ const PESSIMISM_WORDS = new Set(
     "surveillance creepy invasive").split(" ")
 );
 
+const PESSIMISM_INTENSITY: Record<string, number> = {
+  // extreme
+  doom: 3, doomed: 3, dying: 3, dead: 3, killed: 3, dystopia: 3, dystopian: 3,
+  // mild
+  skeptical: 1, skepticism: 1, doubt: 1, doubts: 1, doubtful: 1, doubting: 1,
+  uncertain: 1, uncertainty: 1, fragile: 1, fragility: 1,
+  slow: 1, slower: 1, slowest: 1, expensive: 1, costly: 1, overpriced: 1,
+};
+
 const OPTIMISM_WORDS = new Set(
   ("optimistic optimism exciting excited excitement promising promise future futuristic " +
     "breakthrough amazing incredible awesome love loved great greatest best fantastic " +
@@ -547,6 +598,15 @@ const OPTIMISM_WORDS = new Set(
     "solve solved free trust trusted").split(" ")
 );
 
+const OPTIMISM_INTENSITY: Record<string, number> = {
+  // extreme
+  breakthrough: 3, revolution: 3, revolutionary: 3,
+  // mild
+  promising: 1, promise: 1, cool: 1, neat: 1, fun: 1,
+  cheap: 1, cheaper: 1, cheapest: 1, free: 1,
+  fast: 1, faster: 1, fastest: 1,
+};
+
 interface Spectrum {
   id: string;
   label: string; // "fear ↔ hope"
@@ -556,6 +616,8 @@ interface Spectrum {
   posEmoji: string;
   negWords: Set<string>;
   posWords: Set<string>;
+  negIntensity: Record<string, number>; // per-word tiers; unlisted words default to 2
+  posIntensity: Record<string, number>;
 }
 
 const FEAR_HOPE: Spectrum = {
@@ -567,6 +629,8 @@ const FEAR_HOPE: Spectrum = {
   posEmoji: "🌱",
   negWords: FEAR_WORDS,
   posWords: HOPE_WORDS,
+  negIntensity: FEAR_INTENSITY,
+  posIntensity: HOPE_INTENSITY,
 };
 
 const PESSIMISM_OPTIMISM: Spectrum = {
@@ -578,6 +642,8 @@ const PESSIMISM_OPTIMISM: Spectrum = {
   posEmoji: "📈",
   negWords: PESSIMISM_WORDS,
   posWords: OPTIMISM_WORDS,
+  negIntensity: PESSIMISM_INTENSITY,
+  posIntensity: OPTIMISM_INTENSITY,
 };
 
 interface ScoredHeadline {
@@ -602,6 +668,7 @@ function scoreHeadline(title: string, link: string, source: string, sp: Spectrum
     .filter(Boolean);
   let neg = 0;
   let pos = 0;
+  let hits = 0;
   const negHits: string[] = [];
   const posHits: string[] = [];
   tokens.forEach((raw, i) => {
@@ -616,18 +683,21 @@ function scoreHeadline(title: string, link: string, source: string, sp: Spectrum
     // Negators neutralize valence rather than flipping polarity
     // (Polanyi & Zaenen 2006: "not a failure" is neutral, not positive).
     if (negated) return;
+    // Graded intensities: a strong word outweighs a mild one
+    // (Reagan et al. 2017: continuum-scored words beat binary valence).
     if (kind === "neg") {
-      neg++;
+      neg += sp.negIntensity[word] ?? 2;
       negHits.push(word);
     } else {
-      pos++;
+      pos += sp.posIntensity[word] ?? 2;
       posHits.push(word);
     }
+    hits++;
   });
   const total = neg + pos;
   const raw = total === 0 ? 0 : Math.round((100 * (pos - neg)) / total);
   // A single matched word swings the full ±100; cap at ±50 to cut day-to-day noise.
-  const index = total === 1 ? Math.max(-50, Math.min(50, raw)) : raw;
+  const index = hits === 1 ? Math.max(-50, Math.min(50, raw)) : raw;
   return {
     title,
     link,
