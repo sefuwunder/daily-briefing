@@ -113,17 +113,19 @@ async function loadWeather() {
     const geoNote = (!state.city && state.geo)
       ? `<br><span style="font-size:12px">📍 approximate location from your IP</span>` : "";
     body.innerHTML = `
-      <div class="wx-now">
-        <div class="wx-icon">${c.icon}</div>
-        <div>
-          <div class="wx-temp">${c.temp_c}°<small>C</small></div>
-          <div class="wx-meta"><strong>${w.place}</strong><br>
-          ${c.description} · feels like ${c.feels_c}°<br>
-          💧 ${c.humidity}% · 💨 ${c.wind_kph} km/h${geoNote}</div>
+      <div class="wx-top">
+        <div class="wx-now">
+          <div class="wx-icon">${c.icon}</div>
+          <div>
+            <div class="wx-temp">${c.temp_c}°<small>C</small></div>
+            <div class="wx-meta"><strong>${w.place}</strong><br>
+            ${c.description} · feels like ${c.feels_c}°<br>
+            💧 ${c.humidity}% · 💨 ${c.wind_kph} km/h${geoNote}</div>
+          </div>
         </div>
+        <div class="sky" id="sky-body" aria-label="Sun and moon tracker"></div>
       </div>
-      <div class="wx-days">${days}</div>
-      <div class="sky" id="sky-body" aria-label="Sun and moon tracker"></div>`;
+      <div class="wx-days">${days}</div>`;
     renderSky(w.sun);
   } catch (e) {
     body.innerHTML = `<p class="error">Couldn't load weather: ${escapeHtml(e.message)}</p>`;
@@ -187,10 +189,10 @@ function renderSky(sun) {
     <svg class="sky-svg" viewBox="0 0 300 168" role="img" aria-label="Sun and moon arc">
       <defs>
         <linearGradient id="skyday" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="#6ea8e8"/><stop offset="1" stop-color="#f7dcaa"/>
+          <stop offset="0" stop-color="#6ea8e8" stop-opacity=".38"/><stop offset="1" stop-color="#f7dcaa" stop-opacity=".28"/>
         </linearGradient>
         <linearGradient id="skynight" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="#0a0f24"/><stop offset="1" stop-color="#2c3d63"/>
+          <stop offset="0" stop-color="#0a0f24" stop-opacity=".5"/><stop offset="1" stop-color="#2c3d63" stop-opacity=".38"/>
         </linearGradient>
         <radialGradient id="sunglow">
           <stop offset="0" stop-color="#fff3c4" stop-opacity=".85"/><stop offset="1" stop-color="#ffd94d" stop-opacity="0"/>
