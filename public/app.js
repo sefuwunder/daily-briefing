@@ -124,13 +124,14 @@ async function loadWeather() {
           </div>
         </div>
         <div class="sky" id="sky-body" aria-label="Sun and moon tracker"></div>
-        <div class="nightsky" id="nightsky-body" aria-label="Tonight's star map"></div>
       </div>
       <div class="wx-days">${days}</div>`;
     renderSky(w.sun);
     renderNightSky(w);
   } catch (e) {
     body.innerHTML = `<p class="error">Couldn't load weather: ${escapeHtml(e.message)}</p>`;
+    const ns = $("nightsky-body");
+    if (ns) ns.innerHTML = `<p class="muted">Star map unavailable — weather failed to load.</p>`;
   }
 }
 
@@ -272,7 +273,6 @@ function renderNightSky(w) {
     <canvas class="nightsky-canvas" width="600" height="600" role="img"
       aria-label="Star chart for tonight at 10 PM"></canvas>
     <div class="nightsky-side">
-      <div class="nightsky-title">🌌 Tonight's sky</div>
       <div class="nightsky-when muted"></div>
       <div class="nightsky-look"></div>
       <div class="nightsky-note muted">N up · E right · zenith at center</div>

@@ -116,6 +116,7 @@ body {
 .grid > .card:nth-child(3) { animation-delay: 0.14s; }
 .grid > .card:nth-child(4) { animation-delay: 0.21s; }
 .grid > .card:nth-child(5) { animation-delay: 0.28s; }
+.grid > .card:nth-child(6) { animation-delay: 0.35s; }
 
 @keyframes rise {
   from { opacity: 0; transform: translateY(14px); }
@@ -132,7 +133,7 @@ body {
   .mood { grid-column: span 7; }
 }
 @media (max-width: 900px) {
-  .weather, .tasks, .news, .mood { grid-column: span 12; }
+  .weather, .tasks, .news, .mood, .nightsky-widget, .bookmarks { grid-column: span 12; }
   .mood { min-height: 0; }
 }
 
@@ -227,12 +228,9 @@ body {
 .star { fill: #fff; animation: twinkle 3.2s ease-in-out infinite; }
 @keyframes twinkle { 0%, 100% { opacity: 0.25; } 50% { opacity: 0.9; } }
 
-/* tonight's sky — star map for 10 PM local, below the sun & moon tracker */
-.wx-top { flex-wrap: wrap; }
+/* tonight's sky — standalone star-map widget */
+.nightsky-widget { grid-column: span 5; }
 .nightsky {
-  flex: 1 1 100%;
-  border-top: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
-  padding-top: 14px;
   display: flex;
   gap: 18px;
   align-items: center;
@@ -247,7 +245,6 @@ body {
   flex: none;
 }
 .nightsky-side { min-width: 0; }
-.nightsky-title { font-weight: 700; font-size: 15px; letter-spacing: -0.01em; margin-bottom: 6px; }
 .nightsky-when { font-size: 13px; margin-bottom: 8px; }
 .nightsky-look { font-size: 13.5px; line-height: 1.65; color: var(--muted); }
 .nightsky-look b { color: var(--text); font-weight: 600; }
@@ -397,7 +394,7 @@ body {
 .arts-more a:hover { text-decoration: underline; }
 
 /* bookmarks — foldable reading list */
-.bookmarks { grid-column: span 12; }
+.bookmarks { grid-column: span 7; }
 .fold-head { cursor: pointer; user-select: none; margin-bottom: 0; border-radius: 8px; }
 .fold-head:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .fold-head .chev {
