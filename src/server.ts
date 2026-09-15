@@ -499,7 +499,8 @@ const FEAR_WORDS = new Set(
     "murdered suicide poison toxic lethal fatal fatalities grim bleak dire desperate desperation " +
     "chaos chaotic turmoil upheaval crackdown siege besieged coup curfew banned expel expelled " +
     // 2026-09-14: fugitive (research candidate — appeared twice, not excluded)
-    "deport tariff tariffs fugitive").split(" ")
+    // 2026-09-15: missing (research candidate — appeared twice in disaster headlines, not excluded)
+    "deport tariff tariffs fugitive missing").split(" ")
 );
 
 // Graded intensity tiers (Reagan et al. 2017: continuum-scored words beat
@@ -527,6 +528,7 @@ const FEAR_INTENSITY: Record<string, number> = {
   lawsuit: 1, probe: 1, probed: 1, scandal: 1, scandals: 1,
   expel: 1, expelled: 1, banned: 1, curfew: 1, deport: 1,
   hack: 1, hacked: 1, hacking: 1, breach: 1, breached: 1, scam: 1, scams: 1,
+  missing: 1,
 };
 
 const HOPE_WORDS = new Set(
@@ -566,6 +568,11 @@ const NEGATORS = new Set(
    "shouldn't", "wouldn't", "hasn't", "haven't", "hadn't"]
 );
 
+// 2026-09-15: resolution words — the worst is over. A fear hit in a headline
+// containing one of these ("outbreak has peaked") is good news, so neutralize
+// it the way negators do. Scoped to the fear pole of the fear↔hope spectrum.
+const RESOLUTION_WORDS = new Set(["peaked", "slowing", "easing"]);
+
 // Reviewed and rejected as mood signals: topic words that drift with the
 // news cycle rather than carrying stable affect.
 // 2026-09-11: fire, ukraine, case, finds.
@@ -602,7 +609,7 @@ const PESSIMISM_INTENSITY: Record<string, number> = {
 const OPTIMISM_WORDS = new Set(
   ("optimistic optimism exciting excited excitement promising promise future futuristic " +
     "breakthrough amazing incredible awesome love loved great greatest best fantastic " +
-    "wonderful impressive impressed beautiful elegant fast faster fastest cheap cheaper " +
+    "wonderful impressive impressed beautiful elegant faster fastest cheap cheaper " +
     "cheapest open openness democratize empowered empowering potential opportunity " +
     "opportunities progress innovative innovation revolution revolutionary delightful fun " +
     "cool neat clever brilliant genius milestone success successful thriving boom golden " +
@@ -616,7 +623,9 @@ const OPTIMISM_INTENSITY: Record<string, number> = {
   // mild
   promising: 1, promise: 1, cool: 1, neat: 1, fun: 1,
   cheap: 1, cheaper: 1, cheapest: 1, free: 1,
-  fast: 1, faster: 1, fastest: 1,
+  // 2026-09-15: "fast" removed from the lexicon — it fired on neutral tech
+  // headlines ("Fast Tokio Applications"), carrying no real optimism signal.
+  faster: 1, fastest: 1,
 };
 
 interface Spectrum {
@@ -683,6 +692,11 @@ function scoreHeadline(title: string, link: string, source: string, sp: Spectrum
   let hits = 0;
   const negHits: string[] = [];
   const posHits: string[] = [];
+  // 2026-09-15: a resolution word anywhere in the headline ("outbreak has
+  // peaked") means the fear is receding — neutralize fear-pole hits.
+  const resolving =
+    sp.id === "fear-hope" &&
+    tokens.some((t) => RESOLUTION_WORDS.has(t.replace(/^'+|'+$/g, "")));
   tokens.forEach((raw, i) => {
     const word = raw.replace(/^'+|'+$/g, "");
     if (EXCLUDED_WORDS.has(word)) return;
@@ -694,7 +708,9 @@ function scoreHeadline(title: string, link: string, source: string, sp: Spectrum
     const negated = prev.some((t) => NEGATORS.has(t) || t.endsWith("n't"));
     // Negators neutralize valence rather than flipping polarity
     // (Polanyi & Zaenen 2006: "not a failure" is neutral, not positive).
+    // Resolution words neutralize fear hits the same way.
     if (negated) return;
+    if (kind === "neg" && resolving) return;
     // Graded intensities: a strong word outweighs a mild one
     // (Reagan et al. 2017: continuum-scored words beat binary valence).
     if (kind === "neg") {
