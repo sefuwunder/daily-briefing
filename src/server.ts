@@ -160,14 +160,20 @@ const ARTS_FEEDS: Record<string, { source: string; url: string }[]> = {
     { source: "LargeUp", url: "https://www.largeup.com/feed/" },
     { source: "Repeating Islands", url: "https://repeatingislands.com/feed/" },
     { source: "Caribbean Beat", url: "https://www.caribbean-beat.com/feed" },
+    { source: "Maria Jackson 27", url: "https://mariajackson27magazine.com/feed/" },
+    { source: "Ebuzztt", url: "https://ebuzztt.com/feed" },
   ],
   africa: [
     { source: "The NATIVE", url: "https://thenativemag.com/feed" },
     { source: "Music In Africa", url: "https://www.musicinafrica.net/feed" },
+    { source: "ART AFRICA Magazine", url: "https://artafricamagazine.org/feed/" },
+    { source: "Africa Is a Country", url: "https://africasacountry.com/feed" },
+    { source: "Halmblog Music", url: "https://halmblog.com/feed" },
   ],
   easteurope: [
     { source: "Bird In Flight", url: "https://birdinflight.com/feed" },
     { source: "Lossi 36", url: "https://lossi36.com/feed/" },
+    { source: "Kajet Journal", url: "https://kajetjournal.com/feed/" },
   ],
   // global underground art / DIY / net-art — Rhizome & e-flux kin
   // (both sites block feed fetching, so these are the closest working feeds;
