@@ -531,12 +531,14 @@ const FEAR_INTENSITY: Record<string, number> = {
   missing: 1,
 };
 
+// 2026-09-16: "discovery"/"discoveries" removed — misfired on a femicide
+// headline. "record"/"records" removed — diluted the violence signal.
 const HOPE_WORDS = new Set(
   ("hope hopes hoped hopeful breakthrough breakthroughs success successes successful " +
     "successfully win wins won winning winner progress peaceful peace recovery recovered " +
-    "recovering growth growing grown record records celebrate celebrated celebrates celebration " +
+    "recovering growth growing grown celebrate celebrated celebrates celebration " +
     "optimistic optimism solution solutions solve solved solving launch launches launched " +
-    "launching discover discovered discovers discovery discoveries cure cured cures rescue " +
+    "launching discover discovered discovers cure cured cures rescue " +
     "rescued rescues thrive thriving thrives milestone milestones promise promises promised " +
     "promising bright brighter advance advances advanced advancing advancement innovation " +
     "innovations innovative boom booming rally rallied rallies surging surge surged triumph " +
@@ -559,7 +561,6 @@ const HOPE_INTENSITY: Record<string, number> = {
   approve: 1, approved: 1, approval: 1,
   deal: 1, deals: 1, agreement: 1, agreements: 1, agreed: 1,
   launch: 1, launches: 1, launched: 1, launching: 1,
-  record: 1, records: 1,
 };
 
 const NEGATORS = new Set(
@@ -585,6 +586,7 @@ const EXCLUDED_WORDS = new Set([
 ]);
 
 // pessimism / optimism: tuned for tech headlines (Hacker News)
+// 2026-09-16: "bearish" added — scored neutral despite clear pessimism.
 const PESSIMISM_WORDS = new Set(
   ("doom doomed gloom gloomy dying dead decline declines declining declined fail fails " +
     "failed failing failure failures broken obsolete deprecated abandoned abandon sunset " +
@@ -594,7 +596,7 @@ const PESSIMISM_WORDS = new Set(
     "doubt doubts doubtful doubting uncertain uncertainty fragile fragility flawed flaw " +
     "flaws bug bugs buggy slow slower slowest expensive costly overpriced waste wasted " +
     "wasteful pointless useless scam scams fraud monopoly monopolistic stagnation stagnant " +
-    "surveillance creepy invasive").split(" ")
+    "surveillance creepy invasive bearish").split(" ")
 );
 
 const PESSIMISM_INTENSITY: Record<string, number> = {
