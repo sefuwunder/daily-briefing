@@ -155,7 +155,7 @@ const REGION_LABELS: Record<string, string> = {
 };
 
 // indie / DIY / underground arts & culture feeds per region
-const ARTS_FEEDS: Record<string, { source: string; url: string }[]> = {
+const ARTS_FEEDS: Record<string, { source: string; url: string; noFilter?: boolean }[]> = {
   caricom: [
     { source: "LargeUp", url: "https://www.largeup.com/feed/" },
     { source: "Repeating Islands", url: "https://repeatingislands.com/feed/" },
@@ -169,6 +169,8 @@ const ARTS_FEEDS: Record<string, { source: string; url: string }[]> = {
     { source: "ART AFRICA Magazine", url: "https://artafricamagazine.org/feed/" },
     { source: "Africa Is a Country", url: "https://africasacountry.com/feed" },
     { source: "Halmblog Music", url: "https://halmblog.com/feed" },
+    { source: "Brittle Paper", url: "https://brittlepaper.com/feed/", noFilter: true },
+    { source: "Omenana", url: "https://omenana.com/feed/", noFilter: true },
   ],
   easteurope: [
     { source: "Bird In Flight", url: "https://birdinflight.com/feed" },
@@ -238,10 +240,11 @@ function parseRss(xml: string, source: string): NewsItem[] {
 }
 
 async function loadFeedItems(
-  feeds: { source: string; url: string }[],
+  feeds: { source: string; url: string; noFilter?: boolean }[],
   limit: number,
   filter?: (item: NewsItem) => boolean
 ): Promise<NewsItem[]> {
+  const noFilterSources = new Set(feeds.filter((f) => f.noFilter).map((f) => f.source));
   const settled = await Promise.allSettled(
     feeds.map(async (f) => {
       const r = await fetchWithTimeout(f.url, 15000);
@@ -254,7 +257,7 @@ async function loadFeedItems(
   for (const s of settled) {
     if (s.status !== "fulfilled") continue;
     for (const item of s.value) {
-      if (filter && !filter(item)) continue;
+      if (filter && !noFilterSources.has(item.source) && !filter(item)) continue;
       if (seen.has(item.link)) continue;
       seen.add(item.link);
       merged.push(item);
