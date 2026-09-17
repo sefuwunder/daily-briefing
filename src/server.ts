@@ -171,6 +171,7 @@ const ARTS_FEEDS: Record<string, { source: string; url: string; noFilter?: boole
     { source: "Halmblog Music", url: "https://halmblog.com/feed" },
     { source: "Brittle Paper", url: "https://brittlepaper.com/feed/", noFilter: true },
     { source: "Omenana", url: "https://omenana.com/feed/", noFilter: true },
+    { source: "Africanah", url: "https://africanah.org/feed/" },
   ],
   easteurope: [
     { source: "Bird In Flight", url: "https://birdinflight.com/feed" },
@@ -186,6 +187,7 @@ const ARTS_FEEDS: Record<string, { source: string; url: string; noFilter?: boole
     { source: "We Make Money Not Art", url: "https://we-make-money-not-art.com/feed/" },
     { source: "Furtherfield", url: "https://www.furtherfield.org/feed/" },
     { source: "DIY Conspiracy", url: "https://diyconspiracy.net/feed/" },
+    { source: "Elephant", url: "https://elephant.art/feed/" },
   ],
 };
 
