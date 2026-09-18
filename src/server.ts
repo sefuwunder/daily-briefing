@@ -172,11 +172,13 @@ const ARTS_FEEDS: Record<string, { source: string; url: string; noFilter?: boole
     { source: "Brittle Paper", url: "https://brittlepaper.com/feed/", noFilter: true },
     { source: "Omenana", url: "https://omenana.com/feed/", noFilter: true },
     { source: "Africanah", url: "https://africanah.org/feed/" },
+    { source: "NotJustOk", url: "https://notjustok.com/feed/", noFilter: true },
   ],
   easteurope: [
     { source: "Bird In Flight", url: "https://birdinflight.com/feed" },
     { source: "Lossi 36", url: "https://lossi36.com/feed/" },
     { source: "Kajet Journal", url: "https://kajetjournal.com/feed/" },
+    { source: "Art Margins", url: "https://artmargins.com/feed/", noFilter: true },
   ],
   // global underground art / DIY / net-art — Rhizome & e-flux kin
   // (both sites block feed fetching, so these are the closest working feeds;
