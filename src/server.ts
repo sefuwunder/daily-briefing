@@ -162,6 +162,7 @@ const ARTS_FEEDS: Record<string, { source: string; url: string; noFilter?: boole
     { source: "Caribbean Beat", url: "https://www.caribbean-beat.com/feed" },
     { source: "Maria Jackson 27", url: "https://mariajackson27magazine.com/feed/" },
     { source: "Ebuzztt", url: "https://ebuzztt.com/feed" },
+    { source: "Caribbean Collective", url: "https://medium.com/@caribbeancollectivemagazine/feed", noFilter: true },
   ],
   africa: [
     { source: "The NATIVE", url: "https://thenativemag.com/feed" },
@@ -173,12 +174,14 @@ const ARTS_FEEDS: Record<string, { source: string; url: string; noFilter?: boole
     { source: "Omenana", url: "https://omenana.com/feed/", noFilter: true },
     { source: "Africanah", url: "https://africanah.org/feed/" },
     { source: "NotJustOk", url: "https://notjustok.com/feed/", noFilter: true },
+    { source: "Ta Adesa", url: "https://taadesa.org/feed/", noFilter: true },
   ],
   easteurope: [
     { source: "Bird In Flight", url: "https://birdinflight.com/feed" },
     { source: "Lossi 36", url: "https://lossi36.com/feed/" },
     { source: "Kajet Journal", url: "https://kajetjournal.com/feed/" },
     { source: "Art Margins", url: "https://artmargins.com/feed/", noFilter: true },
+    { source: "Hype&Hyper", url: "https://hypeandhyper.com/feed" },
   ],
   // global underground art / DIY / net-art — Rhizome & e-flux kin
   // (both sites block feed fetching, so these are the closest working feeds;
@@ -507,7 +510,8 @@ const FEAR_WORDS = new Set(
     "chaos chaotic turmoil upheaval crackdown siege besieged coup curfew banned expel expelled " +
     // 2026-09-14: fugitive (research candidate — appeared twice, not excluded)
     // 2026-09-15: missing (research candidate — appeared twice in disaster headlines, not excluded)
-    "deport tariff tariffs fugitive missing").split(" ")
+    // 2026-09-19: military (research candidate — two fear-leaning Guardian headlines)
+    "deport tariff tariffs fugitive missing military").split(" ")
 );
 
 // Graded intensity tiers (Reagan et al. 2017: continuum-scored words beat
@@ -531,7 +535,7 @@ const FEAR_INTENSITY: Record<string, number> = {
   risk: 1, risks: 1, risky: 1,
   alarm: 1, alarming: 1, alarmed: 1,
   shortage: 1, shortages: 1, inflation: 1,
-  sanction: 1, sanctions: 1, tariff: 1, tariffs: 1,
+  sanction: 1, sanctions: 1, tariff: 1, tariffs: 1, military: 1,
   lawsuit: 1, probe: 1, probed: 1, scandal: 1, scandals: 1,
   expel: 1, expelled: 1, banned: 1, curfew: 1, deport: 1,
   hack: 1, hacked: 1, hacking: 1, breach: 1, breached: 1, scam: 1, scams: 1,
