@@ -69,6 +69,34 @@
     <div class="nightsky" id="nightsky-body"><p class="muted">Loading star map…</p></div>
   </section>
 
+  <section class="card pet" aria-label="Desktop pet">
+    <div class="card-head">
+      <h2>🐾 Desktop pet <span id="pet-mood" class="badge">…</span></h2>
+    </div>
+    <div class="pet-wrap">
+      <canvas id="pet-canvas" width="128" height="128" role="img"
+        aria-label="Pixel pet"></canvas>
+      <div class="pet-side">
+        <div class="pet-stats">
+          <div class="pet-stat"><span class="pet-ico" aria-hidden="true">🍖</span>
+            <div class="pet-bar"><div id="pet-hunger"></div></div>
+            <span class="pet-val" id="pet-hunger-v">–</span></div>
+          <div class="pet-stat"><span class="pet-ico" aria-hidden="true">😊</span>
+            <div class="pet-bar"><div id="pet-happiness"></div></div>
+            <span class="pet-val" id="pet-happiness-v">–</span></div>
+          <div class="pet-stat"><span class="pet-ico" aria-hidden="true">⚡</span>
+            <div class="pet-bar"><div id="pet-energy"></div></div>
+            <span class="pet-val" id="pet-energy-v">–</span></div>
+        </div>
+        <div class="pet-btns">
+          <button id="pet-feed" class="ghost-btn small">🍖 Feed</button>
+          <button id="pet-play" class="ghost-btn small">💕 Pet / Play</button>
+        </div>
+        <p id="pet-note" class="muted fine" aria-live="polite"></p>
+      </div>
+    </div>
+  </section>
+
   <section class="card bookmarks" aria-label="Bookmarks">
     <div class="card-head fold-head" id="bm-fold" role="button" tabindex="0"
          aria-expanded="false" aria-controls="bm-body">
@@ -86,6 +114,7 @@
 </footer>
 
 <script src="/sky.js"></script>
+<script src="/pet.js"></script>
 <script src="/app.js"></script>
 </body>
 </html>

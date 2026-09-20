@@ -117,6 +117,7 @@ body {
 .grid > .card:nth-child(4) { animation-delay: 0.21s; }
 .grid > .card:nth-child(5) { animation-delay: 0.28s; }
 .grid > .card:nth-child(6) { animation-delay: 0.35s; }
+.grid > .card:nth-child(7) { animation-delay: 0.42s; }
 
 @keyframes rise {
   from { opacity: 0; transform: translateY(14px); }
@@ -133,7 +134,7 @@ body {
   .mood { grid-column: span 7; }
 }
 @media (max-width: 900px) {
-  .weather, .tasks, .news, .mood, .nightsky-widget, .bookmarks { grid-column: span 12; }
+  .weather, .tasks, .news, .mood, .nightsky-widget, .pet, .bookmarks { grid-column: span 12; }
   .mood { min-height: 0; }
 }
 
@@ -229,7 +230,7 @@ body {
 @keyframes twinkle { 0%, 100% { opacity: 0.25; } 50% { opacity: 0.9; } }
 
 /* tonight's sky — standalone star-map widget */
-.nightsky-widget { grid-column: span 5; }
+.nightsky-widget { grid-column: span 4; }
 .nightsky {
   display: flex;
   gap: 18px;
@@ -394,7 +395,7 @@ body {
 .arts-more a:hover { text-decoration: underline; }
 
 /* bookmarks — foldable reading list */
-.bookmarks { grid-column: span 7; }
+.bookmarks { grid-column: span 4; }
 .fold-head { cursor: pointer; user-select: none; margin-bottom: 0; border-radius: 8px; }
 .fold-head:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .fold-head .chev {
@@ -456,6 +457,63 @@ body {
 .chip.neg { background: rgba(248, 113, 113, 0.14); color: var(--red); }
 .chip.pos { background: rgba(74, 222, 128, 0.14); color: var(--green); }
 .words { color: var(--muted); font-size: 12.5px; margin-top: 3px; }
+
+/* desktop pet — 8-bit pixel pet widget */
+.pet { grid-column: span 4; }
+.pet-wrap {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+#pet-canvas {
+  width: 128px;
+  height: 128px;
+  flex: none;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
+  border-radius: 12px;
+}
+.pet-side { flex: 1; min-width: 0; }
+.pet-stats { display: grid; gap: 7px; margin-bottom: 12px; }
+.pet-stat { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
+.pet-ico { width: 18px; text-align: center; flex: none; }
+.pet-bar {
+  flex: 1;
+  height: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.pet-bar > div {
+  height: 100%;
+  width: 0;
+  background: var(--accent);
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+.pet-bar > div.bad { background: var(--red); }
+.pet-val {
+  width: 26px;
+  text-align: right;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  flex: none;
+}
+.pet-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.pet-btns .ghost-btn:disabled { opacity: 0.5; cursor: default; }
+#pet-note { min-height: 18px; margin: 8px 0 0; }
+#pet-mood { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+@media (max-width: 420px) {
+  .pet-wrap { flex-direction: column; align-items: flex-start; }
+}
+/* Late override: the base spans for these cards are declared after the
+   main responsive block, so restate the mobile stacking here to win. */
+@media (max-width: 900px) {
+  .nightsky-widget, .pet, .bookmarks { grid-column: span 12; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
