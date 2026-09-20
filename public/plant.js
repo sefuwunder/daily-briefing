@@ -18,12 +18,11 @@ var PLANT_KEY = "briefing_plant";
  *   18–28°C comfort band, tapering to 0.3 at 10°C / 36°C, 0.2 beyond.
  * COMBINED: growth += GROWTH_PER_H × sunFactor × tempFactor per watered hour,
  *   integrated in 15-minute steps across the elapsed gap (capped at 72h).
- * BASE RATE: GROWTH_PER_H = 100/120 → seed to bloom in 120 watered hours at
- *   factor 1.0 (ideal: warm bright days, always watered). A typical day
- *   averages ~0.45 combined (nights + cool mornings drag it down), so with
- *   attentive twice-daily watering expect bloom in ~11 days. Neglect pauses
- *   growth; it never shrinks. */
-var GROWTH_PER_H = 100 / 120;
+ * BASE RATE: GROWTH_PER_H = 100/54, calibrated so a typical day (combined
+ *   factor averaging ~0.45 with nights + cool mornings) blooms in ~5 days of
+ *   attentive twice-daily watering. Perpetual ideal conditions would bloom in
+ *   ~54h. Neglect pauses growth; it never shrinks. */
+var GROWTH_PER_H = 100 / 54;
 var WATER_DECAY_PER_H = 100 / 18;
 var WATERED_ABOVE = 20;
 var MAX_GAP_H = 72;
