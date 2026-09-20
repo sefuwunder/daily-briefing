@@ -97,6 +97,28 @@
     </div>
   </section>
 
+  <section class="card plant" aria-label="Plant simulator">
+    <div class="card-head">
+      <h2>🪴 Plant <span id="plant-stage" class="badge">…</span></h2>
+    </div>
+    <p id="plant-fallback" class="muted" hidden>WebGL isn't available in this browser, so the plant stays a daydream. 🌱</p>
+    <div class="plant-wrap" id="plant-wrap">
+      <canvas id="plant-canvas" width="256" height="256" role="img"
+        aria-label="3D plant"></canvas>
+      <div class="plant-side">
+        <div class="pet-stats">
+          <div class="pet-stat"><span class="pet-ico" aria-hidden="true">💧</span>
+            <div class="pet-bar"><div id="plant-water-bar"></div></div>
+            <span class="pet-val" id="plant-water-v">–</span></div>
+        </div>
+        <div class="pet-btns">
+          <button id="plant-water" class="ghost-btn small">💧 Water</button>
+        </div>
+        <p id="plant-note" class="muted fine" aria-live="polite"></p>
+      </div>
+    </div>
+  </section>
+
   <section class="card bookmarks" aria-label="Bookmarks">
     <div class="card-head fold-head" id="bm-fold" role="button" tabindex="0"
          aria-expanded="false" aria-controls="bm-body">
@@ -115,6 +137,7 @@
 
 <script src="/sky.js"></script>
 <script src="/pet.js"></script>
+<script src="/plant.js"></script>
 <script src="/app.js"></script>
 </body>
 </html>

@@ -504,15 +504,38 @@ body {
 }
 .pet-btns { display: flex; gap: 8px; flex-wrap: wrap; }
 .pet-btns .ghost-btn:disabled { opacity: 0.5; cursor: default; }
-#pet-note { min-height: 18px; margin: 8px 0 0; }
+#pet-note, #plant-note { min-height: 18px; margin: 8px 0 0; }
 #pet-mood { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+/* 3D plant simulator */
+.plant-wrap {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+#plant-canvas {
+  width: 150px;
+  height: 150px;
+  flex: none;
+  border-radius: 12px;
+  background: radial-gradient(circle at 50% 32%, rgba(140, 190, 255, 0.12), rgba(0, 0, 0, 0.32));
+  border: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
+}
+.plant-side { flex: 1; min-width: 0; }
+#plant-stage { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+#plant-fallback { margin: 4px 0 8px; }
+@media (max-width: 420px) {
+  .plant-wrap { flex-direction: column; align-items: stretch; }
+  #plant-canvas { align-self: flex-start; }
+}
+/* bottom row: four balanced cards (nightsky / pet / plant / bookmarks) */
+.nightsky-widget, .pet, .plant, .bookmarks { grid-column: span 3; }
 @media (max-width: 420px) {
   .pet-wrap { flex-direction: column; align-items: flex-start; }
 }
 /* Late override: the base spans for these cards are declared after the
    main responsive block, so restate the mobile stacking here to win. */
 @media (max-width: 900px) {
-  .nightsky-widget, .pet, .bookmarks { grid-column: span 12; }
+  .nightsky-widget, .pet, .plant, .bookmarks { grid-column: span 12; }
 }
 
 @media (prefers-reduced-motion: reduce) {
