@@ -134,7 +134,7 @@ body {
   .nightsky-widget { grid-column: span 5; } /* mood(7) + nightsky(5) = 12 */
 }
 @media (max-width: 900px) {
-  .weather, .tasks, .news, .mood, .nightsky-widget, .pet, .plant, .bookmarks { grid-column: span 12; }
+  .weather, .tasks, .news, .mood, .nightsky-widget, .pet, .plant, .bookmarks, .meadow { grid-column: span 12; }
   .mood { min-height: 0; }
 }
 
@@ -511,7 +511,8 @@ body {
 .weather { grid-column: span 5; }
 .plant { grid-column: span 7; }
 .weather, .plant { align-self: stretch; }
-/* row 2 = tasks(7) + news(5); row 3 = mood(8) + nightsky(4); row 4 = pet(6) + bookmarks(6) */
+/* row 2 = meadow vista (12); row 3 = tasks(7) + news(5); row 4 = mood(8) + nightsky(4); row 5 = pet(6) + bookmarks(6) */
+.meadow { grid-column: span 12; }
 .nightsky-widget { grid-column: span 4; }
 .pet, .bookmarks { grid-column: span 6; }
 /* 3D plant simulator */
@@ -534,6 +535,15 @@ body {
 .plant-side { flex: 1; min-width: 0; }
 #plant-stage { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
 #plant-fallback { margin: 4px 0 8px; }
+/* 3D meadow simulator: full-width vista */
+.meadow-wrap { border-radius: 12px; overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--border) 65%, transparent); }
+#meadow-canvas { display: block; width: 100%; height: 300px; }
+#meadow-status { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+#meadow-fallback { margin: 4px 0 8px; }
+@media (max-width: 420px) {
+  #meadow-canvas { height: 220px; }
+}
 @media (max-width: 420px) {
   .plant-wrap { flex-direction: column; align-items: stretch; }
   #plant-canvas { align-self: flex-start; }

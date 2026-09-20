@@ -112,6 +112,7 @@ async function handleWeather(url: URL): Promise<Response> {
     timezone: w.timezone,
     current: {
       temp_c: Math.round(c.temperature_2m),
+      weather_code: c.weather_code,
       feels_c: Math.round(c.apparent_temperature),
       humidity: c.relative_humidity_2m,
       wind_kph: Math.round(c.wind_speed_10m),

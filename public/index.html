@@ -54,6 +54,18 @@
     </div>
   </section>
 
+  <section class="card meadow" aria-label="Meadow simulator">
+    <div class="card-head">
+      <h2>🌾 Meadow <span id="meadow-status" class="badge">…</span></h2>
+    </div>
+    <p id="meadow-fallback" class="muted" hidden>WebGL isn't available in this browser, so the meadow stays a daydream. 🌾</p>
+    <div class="meadow-wrap" id="meadow-wrap">
+      <canvas id="meadow-canvas" width="960" height="320" role="img"
+        aria-label="3D meadow"></canvas>
+    </div>
+    <p class="muted fine">Live view of your weather — the sky, light and grass follow the forecast above.</p>
+  </section>
+
   <section class="card tasks" aria-label="ClickUp tasks">
     <div class="card-head">
       <h2>Outstanding tasks <span id="task-count" class="badge"></span></h2>
@@ -139,6 +151,7 @@
 <script src="/sky.js"></script>
 <script src="/pet.js"></script>
 <script src="/plant.js"></script>
+<script src="/meadow.js"></script>
 <script src="/app.js"></script>
 </body>
 </html>
