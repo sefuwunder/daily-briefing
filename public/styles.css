@@ -126,15 +126,15 @@ body {
 
 .weather { grid-column: span 5; }
 .tasks { grid-column: span 7; }
-.news { grid-column: span 4; }
+.news { grid-column: span 5; }
 .mood { grid-column: span 8; min-height: 552px; } /* news list is 460px; mood gets +20% presence */
 
 @media (max-width: 1150px) {
-  .news { grid-column: span 5; }
   .mood { grid-column: span 7; }
+  .nightsky-widget { grid-column: span 5; } /* mood(7) + nightsky(5) = 12 */
 }
 @media (max-width: 900px) {
-  .weather, .tasks, .news, .mood, .nightsky-widget, .pet, .bookmarks { grid-column: span 12; }
+  .weather, .tasks, .news, .mood, .nightsky-widget, .pet, .plant, .bookmarks { grid-column: span 12; }
   .mood { min-height: 0; }
 }
 
@@ -506,15 +506,26 @@ body {
 .pet-btns .ghost-btn:disabled { opacity: 0.5; cursor: default; }
 #pet-note, #plant-note { min-height: 18px; margin: 8px 0 0; }
 #pet-mood { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+/* plant sits next to weather: row 1 = weather(5) + plant(7), and the two
+   stretch to the same height via align-self (grid default is start). */
+.weather { grid-column: span 5; }
+.plant { grid-column: span 7; }
+.weather, .plant { align-self: stretch; }
+/* row 2 = tasks(7) + news(5); row 3 = mood(8) + nightsky(4); row 4 = pet(6) + bookmarks(6) */
+.nightsky-widget { grid-column: span 4; }
+.pet, .bookmarks { grid-column: span 6; }
 /* 3D plant simulator */
+.plant { display: flex; flex-direction: column; }
 .plant-wrap {
   display: flex;
   gap: 16px;
   align-items: center;
+  flex: 1;
 }
 #plant-canvas {
-  width: 150px;
-  height: 150px;
+  width: min(260px, 52%);
+  height: auto;
+  aspect-ratio: 1 / 1;
   flex: none;
   border-radius: 12px;
   background: radial-gradient(circle at 50% 32%, rgba(140, 190, 255, 0.12), rgba(0, 0, 0, 0.32));
@@ -527,8 +538,9 @@ body {
   .plant-wrap { flex-direction: column; align-items: stretch; }
   #plant-canvas { align-self: flex-start; }
 }
-/* bottom row: four balanced cards (nightsky / pet / plant / bookmarks) */
-.nightsky-widget, .pet, .plant, .bookmarks { grid-column: span 3; }
+/* row rebalancing after the plant moved next to weather */
+.nightsky-widget { grid-column: span 4; }
+.pet, .bookmarks { grid-column: span 6; }
 @media (max-width: 420px) {
   .pet-wrap { flex-direction: column; align-items: flex-start; }
 }

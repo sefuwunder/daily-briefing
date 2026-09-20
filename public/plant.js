@@ -7,17 +7,29 @@
 var PLANT_KEY = "briefing_plant";
 
 /* Growth model — all rates documented here:
- * - A full water tank (100) drains in ~18h (WATER_DECAY_PER_H).
- * - The plant only grows while water > 20 (WATERED_ABOVE).
- * - Watered growth takes 5 days (120h) from seed to bloom (GROWTH_PER_H).
- * - So: water roughly twice a day and it blooms in five days
- *   of watered time. Neglect it and growth pauses (it never shrinks).
- * - Catch-up after time away is capped at 72h. */
+ * WATER: a full tank (100) drains in ~18h (WATER_DECAY_PER_H). The plant
+ *   only grows while water > 20 (WATERED_ABOVE); below that growth pauses.
+ * SUN: daylight(h) is a sine hump over local 06:00–20:00, peaking at 13:00.
+ *   sunFactor = 0.15 + 0.85 * daylight — plants rest at night, never fully stop.
+ *   The sun badge and the WebGL light follow local time: warm low sun at
+ *   golden hour, neutral white at midday, dim blue moonlight at night.
+ * TEMP: tempAt = 22 + 6*sin(2π(h-9)/24) + seeded drift(±1.2°C) →
+ *   ~16°C just before dawn, ~28°C mid-afternoon. tempFactor = 1.0 inside the
+ *   18–28°C comfort band, tapering to 0.3 at 10°C / 36°C, 0.2 beyond.
+ * COMBINED: growth += GROWTH_PER_H × sunFactor × tempFactor per watered hour,
+ *   integrated in 15-minute steps across the elapsed gap (capped at 72h).
+ * BASE RATE: GROWTH_PER_H = 100/120 → seed to bloom in 120 watered hours at
+ *   factor 1.0 (ideal: warm bright days, always watered). A typical day
+ *   averages ~0.45 combined (nights + cool mornings drag it down), so with
+ *   attentive twice-daily watering expect bloom in ~11 days. Neglect pauses
+ *   growth; it never shrinks. */
 var GROWTH_PER_H = 100 / 120;
 var WATER_DECAY_PER_H = 100 / 18;
 var WATERED_ABOVE = 20;
 var MAX_GAP_H = 72;
 var WATER_ANIM_MS = 1400;
+var STEP_H = 0.25; // catch-up integration step
+var STEM_COUNT = 5;
 
 var STAGES = [
   { at: 0,  name: "Seed",    emoji: "🌰" },
@@ -29,11 +41,13 @@ var STAGES = [
 ];
 
 function clamp(v) { return Math.max(0, Math.min(100, Math.round(v))); }
+function clampF(v) { return Math.max(0, Math.min(100, v)); } // no rounding: keeps fractional growth/water across ticks
 function clamp01(v) { return Math.max(0, Math.min(1, v)); }
 function rnd(i) { var x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); }
 
 function defaultState() {
-  return { growth: 0, water: 60, updatedAt: Date.now() };
+  return { growth: 0, water: 60, updatedAt: Date.now(),
+           seed: Math.floor(Math.random() * 1e9) };
 }
 
 function loadState() {
@@ -42,9 +56,10 @@ function loadState() {
     var raw = (typeof localStorage !== "undefined") && localStorage.getItem(PLANT_KEY);
     if (raw) {
       var j = JSON.parse(raw);
-      if (typeof j.growth === "number" && isFinite(j.growth)) s.growth = clamp(j.growth);
-      if (typeof j.water === "number" && isFinite(j.water)) s.water = clamp(j.water);
+      if (typeof j.growth === "number" && isFinite(j.growth)) s.growth = clampF(j.growth);
+      if (typeof j.water === "number" && isFinite(j.water)) s.water = clampF(j.water);
       if (typeof j.updatedAt === "number") s.updatedAt = j.updatedAt;
+      if (typeof j.seed === "number" && isFinite(j.seed)) s.seed = Math.floor(Math.abs(j.seed));
     }
   } catch (e) { /* corrupted storage -> fresh seed */ }
   return s;
@@ -57,18 +72,119 @@ function saveState(s) {
   } catch (e) {}
 }
 
-// Deterministic catch-up: water drains over the whole gap, growth advances
-// only during the watered portion.
+// Deterministic catch-up: water drains over the whole gap; growth advances
+// only during watered hours, scaled by the sun and temperature at each step.
 function simulate(s, nowMs) {
   var elapsedH = Math.max(0, Math.min(MAX_GAP_H, (nowMs - s.updatedAt) / 3600000));
-  var wateredH = 0;
-  if (s.water > WATERED_ABOVE && elapsedH > 0) {
-    wateredH = Math.min(elapsedH, (s.water - WATERED_ABOVE) / WATER_DECAY_PER_H);
+  var t = 0;
+  while (t < elapsedH - 1e-9) {
+    var dt = Math.min(STEP_H, elapsedH - t);
+    var at = s.updatedAt + t * 3600000;
+    if (s.water > WATERED_ABOVE) {
+      var h = hourOfDay(at);
+      s.growth += GROWTH_PER_H * sunFactor(h) * tempFactor(tempAt(at, s.seed)) * dt;
+    }
+    s.water -= WATER_DECAY_PER_H * dt;
+    t += dt;
   }
-  s.growth = clamp(s.growth + GROWTH_PER_H * wateredH);
-  s.water = clamp(s.water - WATER_DECAY_PER_H * elapsedH);
+  s.growth = clampF(s.growth);
+  s.water = clampF(s.water);
   s.updatedAt = nowMs;
   return s;
+}
+
+// ---- ambient conditions: sun + temperature, from local time ----
+
+function hourOfDay(ms) {
+  var d = new Date(ms);
+  return d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600;
+}
+
+function dayOfYear(d) {
+  var start = new Date(d.getFullYear(), 0, 0);
+  return Math.floor((d - start) / 86400000);
+}
+
+// 0 at night, sine hump peaking at 13:00 across 06:00–20:00.
+function daylight(h) {
+  if (h < 6 || h > 20) return 0;
+  return Math.sin(Math.PI * (h - 6) / 14);
+}
+
+function sunFactor(h) {
+  return 0.15 + 0.85 * daylight(h);
+}
+
+function sunBadge(h) {
+  if (h >= 5 && h < 8)  return { icon: "🌅", label: "Morning" };
+  if (h >= 8 && h < 16) return { icon: "☀️", label: "Midday" };
+  if (h >= 16 && h < 20) return { icon: "🌇", label: "Evening" };
+  return { icon: "🌙", label: "Night" };
+}
+
+// ~16°C just before dawn, ~28°C mid-afternoon, plus slow seeded drift.
+function tempAt(ms, seed) {
+  var d = new Date(ms);
+  var h = hourOfDay(ms);
+  var drift = 1.2 * Math.sin(seed * 0.001 + dayOfYear(d) * 0.7);
+  return 22 + 6 * Math.sin(2 * Math.PI * (h - 9) / 24) + drift;
+}
+
+// 1.0 in the 18–28°C comfort band, tapering to 0.3 at 10/36°C, 0.2 beyond.
+function tempFactor(t) {
+  if (t >= 18 && t <= 28) return 1;
+  if (t > 10 && t < 18) return 0.3 + 0.7 * (t - 10) / 8;
+  if (t > 28 && t < 36) return 1 - 0.7 * (t - 28) / 8;
+  return 0.2;
+}
+
+function norm3(v) {
+  var l = Math.hypot(v[0], v[1], v[2]) || 1;
+  return [v[0] / l, v[1] / l, v[2] / l];
+}
+
+// Lighting for the WebGL scene at local hour h:
+// {dir, col (rgb × intensity), amb}. Warm low sun at golden hour, neutral at
+// midday, dim blue moonlight at night.
+function lightFor(h) {
+  var dl = daylight(h);
+  if (dl <= 0) {
+    return { dir: norm3([0.3, 0.8, 0.5]), col: [0.10, 0.14, 0.28], amb: 0.16 };
+  }
+  var az = Math.PI * (h - 6) / 14; // east → west
+  var el = dl * 1.1;               // up to ~63°
+  var ce = Math.cos(el);
+  var warm = 1 - Math.min(1, dl * 1.6); // 1 at horizon → 0 overhead
+  var inten = 0.35 + 0.65 * dl;
+  return {
+    dir: norm3([Math.cos(az) * ce, Math.sin(el), Math.sin(az) * ce * 0.6 + 0.35]),
+    col: [1.0 * inten, (0.98 - 0.36 * warm) * inten, (0.94 - 0.56 * warm) * inten],
+    amb: 0.45
+  };
+}
+
+// ---- multi-stem cluster: stable per-stem variation from the persisted seed ----
+function makeStems(seed) {
+  var stems = [];
+  for (var i = 0; i < STEM_COUNT; i++) {
+    var r1 = rnd(seed * 0.913 + i * 17.3 + 1);
+    var r2 = rnd(seed * 1.710 + i * 31.7 + 2);
+    var r3 = rnd(seed * 2.370 + i * 57.1 + 3);
+    var r4 = rnd(seed * 3.190 + i * 91.7 + 4);
+    var r5 = rnd(seed * 4.730 + i * 13.9 + 5);
+    var ang = r1 * Math.PI * 2;
+    var rad = i === 0 ? r2 * 0.15 : 0.12 + r2 * 0.33; // first stem near center
+    stems.push({
+      bx: Math.cos(ang) * rad,
+      bz: Math.sin(ang) * rad,
+      heightF: 0.75 + r3 * 0.3,  // 0.75..1.05
+      leanAng: r4 * 0.13,        // 0..0.13 rad
+      leanYaw: r5 * Math.PI * 2,
+      leafYaw: r2 * Math.PI * 2,
+      bloomDelay: r4 * 10        // 0..10 growth points: shorter stems bloom later
+    });
+  }
+  return stems;
 }
 
 function stageFor(g) {
@@ -203,7 +319,7 @@ var LEAF_PAIRS = [ // [growth threshold, stem fraction, yaw] — alternating sid
   [56, 0.80, Math.PI / 2]
 ];
 
-function buildScene(growth) {
+function buildScene(growth, seed) {
   var m = { p: [], n: [], c: [] };
   // terracotta pot + rim + soil
   addBoxR(m, 0, -0.85, 0, 1.35, 0.6, 1.35, RID, C.pot);
@@ -211,45 +327,67 @@ function buildScene(growth) {
   addBoxR(m, 0, -0.14, 0, 1.95, 0.18, 1.95, RID, C.rim);
   addBoxR(m, 0, -0.05, 0, 1.68, 0.14, 1.68, RID, C.soil);
 
+  var stems = makeStems(seed);
+  var si, i, k;
+
   if (growth < 8) {
-    addBoxR(m, 0, 0.04, 0, 0.4, 0.16, 0.4, RID, C.mound); // seed mound
+    for (si = 0; si < stems.length; si++) { // seeds in the soil
+      addBoxR(m, stems[si].bx, 0.04, stems[si].bz, 0.3, 0.14, 0.3, RID, C.mound);
+    }
     return m;
   }
 
-  var stemT = clamp01((growth - 8) / 57);
-  var stemH = 0.12 + 2.2 * stemT;
-  addBoxR(m, 0, stemH / 2, 0, 0.09, stemH, 0.09, RID, C.stem);
+  for (si = 0; si < stems.length; si++) {
+    var st = stems[si];
+    var gi = clamp(growth - st.bloomDelay); // shorter stems express growth later
+    var R = m3mul(m3ry(st.leanYaw), m3rz(st.leanAng));
+    var bx = st.bx, bz = st.bz;
+    var atY = function (y) { // point y up the (possibly leaning) stem, world space
+      return [bx + R[1] * y, R[4] * y, bz + R[7] * y];
+    };
 
-  if (growth < 20) {
-    // cotyledons: two tiny leaves at the tip
-    addLeaf(m, 0, stemH * 0.92, 0, 0, -0.35, 0.28, C.leafYoung);
-    addLeaf(m, 0, stemH * 0.92, 0, Math.PI, -0.35, 0.28, C.leafYoung);
-  } else {
-    for (var i = 0; i < LEAF_PAIRS.length; i++) {
-      var at = LEAF_PAIRS[i][0], frac = LEAF_PAIRS[i][1], yaw = LEAF_PAIRS[i][2];
-      var pm = clamp01((growth - at) / 22);
-      if (pm <= 0) continue;
-      var y = Math.max(0.22, stemH * frac);
-      var len = 0.15 + 0.55 * pm;
-      var pitch = (-50 + 65 * pm) * Math.PI / 180; // droop -> lift as it matures
-      addLeaf(m, 0, y, 0, yaw, pitch, len, pm < 0.5 ? C.leafYoung : C.leaf);
+    var stemT = clamp01((gi - 8) / 57);
+    var stemH = (0.12 + 2.2 * stemT) * st.heightF;
+    var p0 = atY(0), p1 = atY(stemH);
+    addBoxR(m, (p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2, (p0[2] + p1[2]) / 2,
+            0.09, stemH, 0.09, R, C.stem);
+
+    var maxPairs = st.heightF > 0.95 ? LEAF_PAIRS.length : LEAF_PAIRS.length - 1;
+    if (gi < 20) {
+      // cotyledons: two tiny leaves at the tip
+      var tp = atY(stemH * 0.92);
+      addLeaf(m, tp[0], tp[1], tp[2], st.leafYaw, -0.35, 0.28, C.leafYoung);
+      addLeaf(m, tp[0], tp[1], tp[2], st.leafYaw + Math.PI, -0.35, 0.28, C.leafYoung);
+    } else {
+      for (i = 0; i < maxPairs; i++) {
+        var at = LEAF_PAIRS[i][0], frac = LEAF_PAIRS[i][1];
+        var yaw = LEAF_PAIRS[i][2] + st.leafYaw;
+        var pm = clamp01((gi - at) / 22);
+        if (pm <= 0) continue;
+        var ap = atY(Math.max(0.22, stemH * frac));
+        var len = (0.15 + 0.55 * pm) * st.heightF;
+        var pitch = (-50 + 65 * pm) * Math.PI / 180; // droop -> lift as it matures
+        addLeaf(m, ap[0], ap[1], ap[2], yaw, pitch, len, pm < 0.5 ? C.leafYoung : C.leaf);
+      }
     }
-  }
 
-  if (growth >= 65 && growth < 85) {
-    var bs = 0.1 + 0.12 * clamp01((growth - 65) / 20);
-    addBoxR(m, 0, stemH + bs * 0.7, 0, bs * 2, bs * 2.2, bs * 2, RID, C.bud);
-  }
-  if (growth >= 85) {
-    var f = clamp01((growth - 85) / 15);
-    var fy = stemH + 0.12 * f;
-    addBoxR(m, 0, fy, 0, 0.16 * f + 0.03, 0.14 * f + 0.03, 0.16 * f + 0.03, RID, C.center);
-    for (var k = 0; k < 5; k++) {
-      var pyaw = k * Math.PI * 2 / 5 + 0.3;
-      var pr = (0.3 * f + 0.03) * 0.9;
-      var R = m3mul(m3ry(pyaw), m3rz(-0.5));
-      addBoxR(m, Math.cos(pyaw) * pr, fy + 0.06, -Math.sin(pyaw) * pr,
-              0.34 * f + 0.04, 0.05, 0.2 * f + 0.03, R, C.petal);
+    var tip = atY(stemH);
+    if (gi >= 65 && gi < 85) {
+      var bs = 0.1 + 0.12 * clamp01((gi - 65) / 20);
+      addBoxR(m, tip[0], tip[1] + bs * 0.7, tip[2], bs * 2, bs * 2.2, bs * 2, RID, C.bud);
+    }
+    if (gi >= 85) {
+      var f = clamp01((gi - 85) / 15);
+      var fy = tip[1] + 0.12 * f;
+      addBoxR(m, tip[0], fy, tip[2], 0.16 * f + 0.03, 0.14 * f + 0.03, 0.16 * f + 0.03,
+              RID, C.center);
+      for (k = 0; k < 5; k++) {
+        var pyaw = k * Math.PI * 2 / 5 + 0.3 + st.leafYaw;
+        var pr = (0.3 * f + 0.03) * 0.9;
+        var pR = m3mul(m3ry(pyaw), m3rz(-0.5));
+        addBoxR(m, tip[0] + Math.cos(pyaw) * pr, fy + 0.06, tip[2] - Math.sin(pyaw) * pr,
+                0.34 * f + 0.04, 0.05, 0.2 * f + 0.03, pR, C.petal);
+      }
     }
   }
   return m;
@@ -278,13 +416,14 @@ function dropletPos(i, el, bounce) {
 // ---- WebGL ----
 var VSH = "precision mediump float;\n" +
   "attribute vec3 aPos; attribute vec3 aNor; attribute vec3 aCol;\n" +
-  "uniform mat4 uProj; uniform mat4 uView; uniform mat4 uModel; uniform vec3 uLight;\n" +
+  "uniform mat4 uProj; uniform mat4 uView; uniform mat4 uModel;\n" +
+  "uniform vec3 uLight; uniform vec3 uLightCol; uniform float uAmb;\n" +
   "varying vec3 vCol;\n" +
   "void main(){\n" +
   "  vec4 wp = uModel * vec4(aPos, 1.0);\n" +
   "  vec3 n = normalize(mat3(uModel) * aNor);\n" +
   "  float diff = max(dot(n, normalize(uLight)), 0.0);\n" +
-  "  vCol = aCol * (0.45 + 0.75 * diff);\n" +
+  "  vCol = aCol * (uAmb + uLightCol * diff);\n" +
   "  gl_Position = uProj * uView * wp;\n" +
   "}";
 var FSH = "precision mediump float;\n" +
@@ -329,7 +468,9 @@ function initGL(canvas) {
     uProj: gl.getUniformLocation(prog, "uProj"),
     uView: gl.getUniformLocation(prog, "uView"),
     uModel: gl.getUniformLocation(prog, "uModel"),
-    uLight: gl.getUniformLocation(prog, "uLight")
+    uLight: gl.getUniformLocation(prog, "uLight"),
+    uLightCol: gl.getUniformLocation(prog, "uLightCol"),
+    uAmb: gl.getUniformLocation(prog, "uAmb")
   };
   gl.enable(gl.DEPTH_TEST);
   gl.viewport(0, 0, canvas.width, canvas.height);
@@ -338,9 +479,16 @@ function initGL(canvas) {
   gl.uniformMatrix4fv(G.uProj, false, m4persp(44, aspect, 0.1, 60));
   gl.uniformMatrix4fv(G.uView, false,
     m4lookAt([3.3, 2.3, 4.3], [0, 0.65, 0], [0, 1, 0]));
-  var l = Math.hypot(0.55, 0.9, 0.45);
-  gl.uniform3fv(G.uLight, [0.55 / l, 0.9 / l, 0.45 / l]);
+  setLighting(G, hourOfDay(Date.now()));
   return G;
+}
+
+// Push the sun/temperature-driven lighting for local hour h into the shader.
+function setLighting(G, h) {
+  var L = lightFor(h);
+  G.gl.uniform3fv(G.uLight, L.dir);
+  G.gl.uniform3fv(G.uLightCol, L.col);
+  G.gl.uniform1f(G.uAmb, L.amb);
 }
 
 function uploadBuf(G, buf, arr) {
@@ -351,13 +499,15 @@ function uploadBuf(G, buf, arr) {
 
 // Render one frame. growth 0..100, rotY radians, swayPhase radians (0 = still).
 // drops: null or {t, w} with w = {bounce}.
-function renderFrame(G, growth, rotY, swayPhase, drops) {
+function renderFrame(G, growth, seed, rotY, swayPhase, drops) {
   var gl = G.gl;
-  var m = buildScene(growth);
+  var m = buildScene(growth, seed);
   var i, y;
   for (i = 0; i < m.p.length; i += 3) {
     y = m.p[i + 1];
-    if (y > 0.02) m.p[i] += Math.sin(swayPhase + y * 0.85) * 0.04 * Math.min(1, y / 2.2);
+    if (y > 0.02) {
+      m.p[i] += Math.sin(swayPhase + y * 0.85 + m.p[i] * 0.6) * 0.04 * Math.min(1, y / 2.2);
+    }
   }
   if (drops) {
     for (i = 0; i < 14; i++) {
@@ -380,6 +530,8 @@ function init() {
   var wrap = document.getElementById("plant-wrap");
   var fallback = document.getElementById("plant-fallback");
   var stageEl = document.getElementById("plant-stage");
+  var sunEl = document.getElementById("plant-sun");
+  var tempEl = document.getElementById("plant-temp");
   var barEl = document.getElementById("plant-water-bar");
   var valEl = document.getElementById("plant-water-v");
   var btn = document.getElementById("plant-water");
@@ -403,12 +555,20 @@ function init() {
     if (valEl) valEl.textContent = Math.round(s.water);
   }
 
+  function renderEnv(nowMs) {
+    var h = hourOfDay(nowMs);
+    var sb = sunBadge(h);
+    if (sunEl) sunEl.textContent = sb.icon + " " + sb.label;
+    if (tempEl) tempEl.textContent = "🌡️ " + tempAt(nowMs, s.seed).toFixed(1) + "°C";
+  }
+
   var G = initGL(canvas);
   if (!G) {
     if (wrap) wrap.style.display = "none";
     if (fallback) fallback.hidden = false;
     if (btn) btn.disabled = true;
     renderChrome();
+    renderEnv(Date.now());
     return;
   }
 
@@ -432,7 +592,7 @@ function init() {
     var res = waterAction(s);
     setNote(res.note);
     renderChrome();
-    if (reduced) { renderFrame(G, s.growth, 0.6, 0, null); return; }
+    if (reduced) { renderFrame(G, s.growth, s.seed, 0.6, 0, null); return; }
     watering = { start: nowSec(), bounce: res.alreadyFull };
     if (btn) btn.disabled = true;
   }
@@ -440,8 +600,10 @@ function init() {
   if (btn) btn.addEventListener("click", doWater);
 
   renderChrome();
+  renderEnv(Date.now());
   if (reduced) {
-    renderFrame(G, s.growth, 0.6, 0, null);
+    setLighting(G, hourOfDay(Date.now()));
+    renderFrame(G, s.growth, s.seed, 0.6, 0, null);
     return;
   }
   (function loop() {
@@ -457,14 +619,17 @@ function init() {
         drops = { t: t, w: watering };
       }
     }
-    renderFrame(G, s.growth, 0.6 + t * 0.12, t * 1.4, drops);
+    setLighting(G, hourOfDay(Date.now()));
+    renderFrame(G, s.growth, s.seed, 0.6 + t * 0.12, t * 1.4, drops);
     requestAnimationFrame(loop);
   })();
   // Slow tick: growth + water catch-up so the widget stays truthful.
   setInterval(function () {
-    simulate(s, Date.now());
+    var now = Date.now();
+    simulate(s, now);
     saveState(s);
     renderChrome();
+    renderEnv(now);
   }, 60 * 1000);
 }
 
@@ -472,15 +637,21 @@ function init() {
 var api = {
   PLANT_KEY: PLANT_KEY,
   GROWTH_PER_H: GROWTH_PER_H, WATER_DECAY_PER_H: WATER_DECAY_PER_H,
-  WATERED_ABOVE: WATERED_ABOVE, MAX_GAP_H: MAX_GAP_H,
+  WATERED_ABOVE: WATERED_ABOVE, MAX_GAP_H: MAX_GAP_H, STEP_H: STEP_H,
+  STEM_COUNT: STEM_COUNT,
   STAGES: STAGES, LEAF_PAIRS: LEAF_PAIRS,
-  clamp: clamp, clamp01: clamp01, rnd: rnd,
+  clamp: clamp, clampF: clampF, clamp01: clamp01, rnd: rnd,
   defaultState: defaultState, loadState: loadState, saveState: saveState,
   simulate: simulate, stageFor: stageFor, waterAction: waterAction,
+  hourOfDay: hourOfDay, dayOfYear: dayOfYear, daylight: daylight,
+  sunFactor: sunFactor, sunBadge: sunBadge,
+  tempAt: tempAt, tempFactor: tempFactor, lightFor: lightFor, norm3: norm3,
+  makeStems: makeStems,
   hexRGB: hexRGB, m4mul: m4mul, m4persp: m4persp, m4lookAt: m4lookAt, m4rotY: m4rotY,
   m3mul: m3mul, m3ry: m3ry, m3rz: m3rz,
   addBoxR: addBoxR, addLeaf: addLeaf, buildScene: buildScene,
-  dropletPos: dropletPos, renderFrame: renderFrame, initGL: initGL
+  dropletPos: dropletPos, renderFrame: renderFrame, initGL: initGL,
+  setLighting: setLighting
 };
 var root = typeof window !== "undefined" ? window : globalThis;
 root.GrowPlant = api;
