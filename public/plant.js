@@ -9,11 +9,11 @@ var PLANT_KEY = "briefing_plant";
 /* Growth model — all rates documented here:
  * - A full water tank (100) drains in ~18h (WATER_DECAY_PER_H).
  * - The plant only grows while water > 20 (WATERED_ABOVE).
- * - Watered growth takes ~36h from seed to bloom (GROWTH_PER_H).
- * - So: water roughly twice a day and it blooms in about a day and a half
+ * - Watered growth takes 5 days (120h) from seed to bloom (GROWTH_PER_H).
+ * - So: water roughly twice a day and it blooms in five days
  *   of watered time. Neglect it and growth pauses (it never shrinks).
  * - Catch-up after time away is capped at 72h. */
-var GROWTH_PER_H = 100 / 36;
+var GROWTH_PER_H = 100 / 120;
 var WATER_DECAY_PER_H = 100 / 18;
 var WATERED_ABOVE = 20;
 var MAX_GAP_H = 72;
