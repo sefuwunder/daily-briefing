@@ -104,6 +104,9 @@ async function loadWeather() {
     const r = await fetch(await weatherUrl());
     const w = await r.json();
     if (!r.ok) throw new Error(w.error || "weather failed");
+    // Publish for ambient widgets (meadow, …) so they share one fetch.
+    window.__briefingWeather = w;
+    try { window.dispatchEvent(new CustomEvent("briefing:weather", { detail: w })); } catch (e) {}
     const c = w.current;
     const days = w.daily.map((d) => {
       const label = new Date(d.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short" });

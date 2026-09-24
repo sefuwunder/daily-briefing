@@ -16,11 +16,14 @@
     <h1 id="briefing-title">☀️ Morning Briefing</h1>
     <p id="dateline" class="dateline">…</p>
   </div>
-  <button id="refresh-all" class="ghost-btn" title="Refresh everything">↻ Refresh</button>
+  <div class="head-actions">
+    <button id="reset-layout" class="ghost-btn" title="Reset widget layout to default">⤺ Layout</button>
+    <button id="refresh-all" class="ghost-btn" title="Refresh everything">↻ Refresh</button>
+  </div>
 </header>
 
 <main class="grid">
-  <section class="card weather" aria-label="Weather">
+  <section class="card weather" data-widget="weather" aria-label="Weather">
     <div class="card-head">
       <h2>Weather</h2>
       <form id="city-form" class="city-form" autocomplete="off">
@@ -32,7 +35,41 @@
     <div id="weather-body"><p class="muted">Loading weather…</p></div>
   </section>
 
-  <section class="card tasks" aria-label="ClickUp tasks">
+  <section class="card plant" data-widget="plant" aria-label="Plant simulator">
+    <div class="card-head">
+      <h2>🪴 Plant <span id="plant-stage" class="badge">…</span> <span id="plant-sun" class="badge">…</span> <span id="plant-temp" class="badge">…</span></h2>
+    </div>
+    <p id="plant-fallback" class="muted" hidden>WebGL isn't available in this browser, so the plant stays a daydream. 🌱</p>
+    <div class="plant-wrap" id="plant-wrap">
+      <canvas id="plant-canvas" width="256" height="256" role="img"
+        aria-label="3D plant"></canvas>
+      <div class="plant-side">
+        <div class="pet-stats">
+          <div class="pet-stat"><span class="pet-ico" aria-hidden="true">💧</span>
+            <div class="pet-bar"><div id="plant-water-bar"></div></div>
+            <span class="pet-val" id="plant-water-v">–</span></div>
+        </div>
+        <div class="pet-btns">
+          <button id="plant-water" class="ghost-btn small">💧 Water</button>
+        </div>
+        <p id="plant-note" class="muted fine" aria-live="polite"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="card meadow" data-widget="meadow" aria-label="Meadow simulator">
+    <div class="card-head">
+      <h2>🌾 Meadow <span id="meadow-status" class="badge">…</span></h2>
+    </div>
+    <p id="meadow-fallback" class="muted" hidden>WebGL isn't available in this browser, so the meadow stays a daydream. 🌾</p>
+    <div class="meadow-wrap" id="meadow-wrap">
+      <canvas id="meadow-canvas" width="960" height="320" role="img"
+        aria-label="3D meadow"></canvas>
+    </div>
+    <p class="muted fine">Live view of your weather — the sky, light and grass follow the forecast above.</p>
+  </section>
+
+  <section class="card tasks" data-widget="tasks" aria-label="ClickUp tasks">
     <div class="card-head">
       <h2>Outstanding tasks <span id="task-count" class="badge"></span></h2>
       <button id="refresh-tasks" class="ghost-btn small" title="Refresh tasks">↻</button>
@@ -40,7 +77,7 @@
     <div id="tasks-body"><p class="muted">Loading tasks…</p></div>
   </section>
 
-  <section class="card news" aria-label="News">
+  <section class="card news" data-widget="news" aria-label="News">
     <div class="card-head">
       <h2>News</h2>
       <nav class="tabs" role="tablist">
@@ -53,7 +90,7 @@
     <div id="news-body"><p class="muted">Loading headlines…</p></div>
   </section>
 
-  <section class="card mood" aria-label="Headline mood">
+  <section class="card mood" data-widget="mood" aria-label="Headline mood">
     <div class="card-head">
       <h2>Headline mood <span class="badge">sentiment</span></h2>
       <button id="refresh-mood" class="ghost-btn small" title="Refresh mood">↻</button>
@@ -62,14 +99,43 @@
     <p class="muted fine">Word-list scoring of today's front pages — a vibe check, not science. Hacker News is scored on pessimism ↔ optimism; The Guardian on fear ↔ hope.</p>
   </section>
 
-  <section class="card nightsky-widget" aria-label="Tonight's sky">
+  <section class="card nightsky-widget" data-widget="nightsky" aria-label="Tonight's sky">
     <div class="card-head">
       <h2>🌌 Tonight's sky</h2>
     </div>
     <div class="nightsky" id="nightsky-body"><p class="muted">Loading star map…</p></div>
   </section>
 
-  <section class="card bookmarks" aria-label="Bookmarks">
+  <section class="card pet" data-widget="pet" aria-label="Desktop pet">
+    <div class="card-head">
+      <h2>🐾 Desktop pet <span id="pet-mood" class="badge">…</span></h2>
+    </div>
+    <div class="pet-wrap">
+      <canvas id="pet-canvas" width="128" height="128" role="img"
+        aria-label="Pixel pet"></canvas>
+      <div class="pet-side">
+        <div class="pet-stats">
+          <div class="pet-stat"><span class="pet-ico" aria-hidden="true">🍖</span>
+            <div class="pet-bar"><div id="pet-hunger"></div></div>
+            <span class="pet-val" id="pet-hunger-v">–</span></div>
+          <div class="pet-stat"><span class="pet-ico" aria-hidden="true">😊</span>
+            <div class="pet-bar"><div id="pet-happiness"></div></div>
+            <span class="pet-val" id="pet-happiness-v">–</span></div>
+          <div class="pet-stat"><span class="pet-ico" aria-hidden="true">⚡</span>
+            <div class="pet-bar"><div id="pet-energy"></div></div>
+            <span class="pet-val" id="pet-energy-v">–</span></div>
+        </div>
+        <div class="pet-btns">
+          <button id="pet-feed" class="ghost-btn small">🍖 Feed</button>
+          <button id="pet-play" class="ghost-btn small">💕 Pet / Play</button>
+        </div>
+        <p id="pet-note" class="muted fine" aria-live="polite"></p>
+      </div>
+    </div>
+  </section>
+
+
+  <section class="card bookmarks" data-widget="bookmarks" aria-label="Bookmarks">
     <div class="card-head fold-head" id="bm-fold" role="button" tabindex="0"
          aria-expanded="false" aria-controls="bm-body">
       <h2>🔖 Bookmarks <span id="bm-count" class="badge"></span></h2>
@@ -86,6 +152,10 @@
 </footer>
 
 <script src="/sky.js"></script>
+<script src="/pet.js"></script>
+<script src="/plant.js"></script>
+<script src="/meadow.js"></script>
+<script src="/drag-order.js"></script>
 <script src="/app.js"></script>
 </body>
 </html>
