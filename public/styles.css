@@ -117,7 +117,6 @@ body {
 .grid > .card:nth-child(4) { animation-delay: 0.21s; }
 .grid > .card:nth-child(5) { animation-delay: 0.28s; }
 .grid > .card:nth-child(6) { animation-delay: 0.35s; }
-.grid > .card:nth-child(7) { animation-delay: 0.42s; }
 
 @keyframes rise {
   from { opacity: 0; transform: translateY(14px); }
@@ -126,15 +125,15 @@ body {
 
 .weather { grid-column: span 5; }
 .tasks { grid-column: span 7; }
-.news { grid-column: span 5; }
+.news { grid-column: span 4; }
 .mood { grid-column: span 8; min-height: 552px; } /* news list is 460px; mood gets +20% presence */
 
 @media (max-width: 1150px) {
+  .news { grid-column: span 5; }
   .mood { grid-column: span 7; }
-  .nightsky-widget { grid-column: span 5; } /* mood(7) + nightsky(5) = 12 */
 }
 @media (max-width: 900px) {
-  .weather, .tasks, .news, .mood, .nightsky-widget, .pet, .plant, .bookmarks, .meadow { grid-column: span 12; }
+  .weather, .tasks, .news, .mood, .nightsky-widget, .bookmarks { grid-column: span 12; }
   .mood { min-height: 0; }
 }
 
@@ -230,7 +229,7 @@ body {
 @keyframes twinkle { 0%, 100% { opacity: 0.25; } 50% { opacity: 0.9; } }
 
 /* tonight's sky — standalone star-map widget */
-.nightsky-widget { grid-column: span 4; }
+.nightsky-widget { grid-column: span 5; }
 .nightsky {
   display: flex;
   gap: 18px;
@@ -395,7 +394,7 @@ body {
 .arts-more a:hover { text-decoration: underline; }
 
 /* bookmarks — foldable reading list */
-.bookmarks { grid-column: span 4; }
+.bookmarks { grid-column: span 7; }
 .fold-head { cursor: pointer; user-select: none; margin-bottom: 0; border-radius: 8px; }
 .fold-head:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .fold-head .chev {
@@ -458,131 +457,6 @@ body {
 .chip.pos { background: rgba(74, 222, 128, 0.14); color: var(--green); }
 .words { color: var(--muted); font-size: 12.5px; margin-top: 3px; }
 
-/* desktop pet — 8-bit pixel pet widget */
-.pet { grid-column: span 4; }
-.pet-wrap {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-}
-#pet-canvas {
-  width: 128px;
-  height: 128px;
-  flex: none;
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
-  background: rgba(0, 0, 0, 0.28);
-  border: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
-  border-radius: 12px;
-}
-.pet-side { flex: 1; min-width: 0; }
-.pet-stats { display: grid; gap: 7px; margin-bottom: 12px; }
-.pet-stat { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
-.pet-ico { width: 18px; text-align: center; flex: none; }
-.pet-bar {
-  flex: 1;
-  height: 8px;
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 999px;
-  overflow: hidden;
-}
-.pet-bar > div {
-  height: 100%;
-  width: 0;
-  background: var(--accent);
-  border-radius: 999px;
-  transition: width 0.4s ease;
-}
-.pet-bar > div.bad { background: var(--red); }
-.pet-val {
-  width: 26px;
-  text-align: right;
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-  font-size: 12px;
-  flex: none;
-}
-.pet-btns { display: flex; gap: 8px; flex-wrap: wrap; }
-.pet-btns .ghost-btn:disabled { opacity: 0.5; cursor: default; }
-#pet-note, #plant-note { min-height: 18px; margin: 8px 0 0; }
-#pet-mood { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
-/* plant sits next to weather: row 1 = weather(5) + plant(7), and the two
-   stretch to the same height via align-self (grid default is start). */
-.weather { grid-column: span 5; }
-.plant { grid-column: span 7; }
-.weather, .plant { align-self: stretch; }
-/* row 2 = meadow vista (12); row 3 = tasks(7) + news(5); row 4 = mood(8) + nightsky(4); row 5 = pet(6) + bookmarks(6) */
-.meadow { grid-column: span 12; }
-.nightsky-widget { grid-column: span 4; }
-.pet, .bookmarks { grid-column: span 6; }
-/* 3D plant simulator */
-.plant { display: flex; flex-direction: column; }
-.plant-wrap {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-  flex: 1;
-}
-#plant-canvas {
-  width: min(260px, 52%);
-  height: auto;
-  aspect-ratio: 1 / 1;
-  flex: none;
-  border-radius: 12px;
-  background: radial-gradient(circle at 50% 32%, rgba(140, 190, 255, 0.12), rgba(0, 0, 0, 0.32));
-  border: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
-}
-.plant-side { flex: 1; min-width: 0; }
-#plant-stage { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
-#plant-fallback { margin: 4px 0 8px; }
-/* 3D meadow simulator: full-width vista */
-.meadow-wrap { border-radius: 12px; overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--border) 65%, transparent); }
-#meadow-canvas { display: block; width: 100%; height: 300px; }
-#meadow-status { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
-#meadow-fallback { margin: 4px 0 8px; }
-@media (max-width: 420px) {
-  #meadow-canvas { height: 220px; }
-}
-@media (max-width: 420px) {
-  .plant-wrap { flex-direction: column; align-items: stretch; }
-  #plant-canvas { align-self: flex-start; }
-}
-/* row rebalancing after the plant moved next to weather */
-.nightsky-widget { grid-column: span 4; }
-.pet, .bookmarks { grid-column: span 6; }
-@media (max-width: 420px) {
-  .pet-wrap { flex-direction: column; align-items: flex-start; }
-}
-/* Late override: the base spans for these cards are declared after the
-   main responsive block, so restate the mobile stacking here to win. */
-@media (max-width: 900px) {
-  .nightsky-widget, .pet, .plant, .bookmarks { grid-column: span 12; }
-}
-
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
-
-/* ---- widget drag-to-reorder ---- */
-.sr-only {
-  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
-  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
-}
-.topbar .head-actions { display: flex; gap: 10px; align-items: center; }
-.drag-handle {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 28px; height: 28px; margin-right: 2px;
-  border-radius: 8px; color: var(--muted);
-  font-size: 15px; letter-spacing: -2px; line-height: 1;
-  cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none;
-  flex: 0 0 auto;
-}
-.drag-handle:hover { background: rgba(255, 255, 255, 0.06); color: var(--text); }
-.drag-handle:active { cursor: grabbing; }
-.drag-handle:focus-visible {
-  outline: 2px solid var(--accent); outline-offset: 2px; color: var(--text);
-}
-.card.dragging { opacity: 0.55; }
-.card.drop-before { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 12px 32px rgba(0, 0, 0, 0.35), 0 -4px 0 0 var(--accent); }
-.card.drop-after { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 12px 32px rgba(0, 0, 0, 0.35), 0 4px 0 0 var(--accent); }

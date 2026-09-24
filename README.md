@@ -39,14 +39,6 @@ The heading, greeting, and accent theme shift with the time of day
   Lexicon-based (with basic negation handling), shown per source with a
   diverging meter plus the most negative / most positive headlines.
 
-## Layout
-
-Drag the ⋮⋮ grip in any widget's header to reorder the dashboard — your
-order is saved in the browser (`briefing_widget_order` in localStorage) and
-restored on every visit. The grips are keyboard-accessible too: focus one
-and use the arrow keys (Home/End jump to the ends). The **⤺ Layout** button
-in the header resets to the default order.
-
 ## Run it
 
 ```sh

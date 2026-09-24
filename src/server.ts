@@ -164,6 +164,7 @@ const ARTS_FEEDS: Record<string, { source: string; url: string; noFilter?: boole
     { source: "Maria Jackson 27", url: "https://mariajackson27magazine.com/feed/" },
     { source: "Ebuzztt", url: "https://ebuzztt.com/feed" },
     { source: "Caribbean Collective", url: "https://medium.com/@caribbeancollectivemagazine/feed", noFilter: true },
+    { source: "RaptureStone", url: "https://rapturestone.com/feed/", noFilter: true },
   ],
   africa: [
     { source: "The NATIVE", url: "https://thenativemag.com/feed" },
@@ -176,6 +177,7 @@ const ARTS_FEEDS: Record<string, { source: string; url: string; noFilter?: boole
     { source: "Africanah", url: "https://africanah.org/feed/" },
     { source: "NotJustOk", url: "https://notjustok.com/feed/", noFilter: true },
     { source: "Ta Adesa", url: "https://taadesa.org/feed/", noFilter: true },
+    { source: "DakArtNews", url: "https://dakartnews.com/feed/", noFilter: true },
   ],
   easteurope: [
     { source: "Bird In Flight", url: "https://birdinflight.com/feed" },
