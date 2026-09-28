@@ -165,6 +165,7 @@ const ARTS_FEEDS: Record<string, { source: string; url: string; noFilter?: boole
     { source: "Ebuzztt", url: "https://ebuzztt.com/feed" },
     { source: "Caribbean Collective", url: "https://medium.com/@caribbeancollectivemagazine/feed", noFilter: true },
     { source: "RaptureStone", url: "https://rapturestone.com/feed/", noFilter: true },
+    { source: "National Gallery of Jamaica", url: "https://nationalgalleryofjamaica.wordpress.com/feed/" },
   ],
   africa: [
     { source: "The NATIVE", url: "https://thenativemag.com/feed" },
