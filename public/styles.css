@@ -270,25 +270,19 @@ body {
 }
 .city-form input:focus { outline: none; border-color: var(--accent); }
 
-/* tasks */
-.task {
+/* comms — terse per-channel condition, one line each */
+.comms-list { display: flex; flex-direction: column; }
+.comms-row {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: space-between;
   gap: 12px;
-  padding: 11px 6px;
+  padding: 9px 6px;
   border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
-  border-radius: 8px;
-  transition: background 0.2s ease;
 }
-.task:hover { background: rgba(255, 255, 255, 0.03); }
-.task:last-child { border-bottom: none; }
-.task .dot { margin-top: 5px; width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-.dot.urgent { background: var(--red); box-shadow: 0 0 8px var(--red); }
-.dot.high { background: var(--accent); }
-.dot.normal { background: var(--blue); }
-.dot.low { background: var(--muted); }
-.task .name { font-size: 15px; line-height: 1.45; font-weight: 500; letter-spacing: -0.005em; }
-.task .sub { color: var(--muted); font-size: 13px; margin-top: 3px; display: flex; gap: 10px; flex-wrap: wrap; }
+.comms-row:last-child { border-bottom: none; }
+.comms-label { font-size: 15px; font-weight: 500; letter-spacing: -0.005em; }
+.comms-cond { display: flex; align-items: center; gap: 10px; font-size: 13px; }
 .pill {
   border: 1px solid var(--border);
   border-radius: 999px;
@@ -297,7 +291,6 @@ body {
   font-weight: 600;
 }
 .pill.due-soon { border-color: color-mix(in srgb, var(--accent) 50%, transparent); color: var(--accent); }
-.task-list { max-height: 380px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
 
 /* news — condensed to ~35% of the page width, stories scroll inside the card */
 .news .card-head { margin-bottom: 10px; }

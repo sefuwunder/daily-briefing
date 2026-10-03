@@ -294,43 +294,37 @@ function renderNightSky(w) {
     : `<span class="muted">Nothing bright above the horizon — check back later.</span>`;
 }
 
-// ---- tasks ----
-function dueInfo(task) {
-  if (!task.due_iso) return "";
-  const due = new Date(task.due_iso);
-  const now = new Date();
-  const days = Math.ceil((due - now) / 86400000);
-  const label = task.due || due.toLocaleDateString("en-US", { month: "short", day: "numeric" }).toUpperCase();
-  if (days < 0) return `<span class="pill due-soon">overdue</span><span>due ${label}</span>`;
-  if (days <= 2) return `<span class="pill due-soon">due ${label}</span>`;
-  return `<span>due ${label}</span>`;
-}
-
-async function loadTasks() {
-  const body = $("tasks-body");
+// ---- comms: terse present-condition across Switchboard channels ----
+async function loadComms() {
+  const body = $("comms-body");
+  const badge = $("comms-badge");
   try {
-    const r = await fetch("/api/tasks");
+    const r = await fetch("/api/comms");
     const data = await r.json();
-    if (!r.ok || data.error) throw new Error(data.error || "tasks failed");
-    $("task-count").textContent = data.count === 1 ? "1 open" : `${data.count} open`;
-    if (!data.tasks.length) {
-      body.innerHTML = `<p class="muted">🎉 Nothing outstanding. Enjoy the day.</p>`;
+    if (!r.ok || !data.ok) throw new Error((data && data.error) || "comms failed");
+    const chans = data.channels || [];
+    badge.textContent = data.high ? `${data.high} high` : "quiet";
+    if (!chans.length) {
+      body.innerHTML = `<p class="muted">No channels configured.</p>`;
       return;
     }
-    body.innerHTML = `<div class="task-list">` + data.tasks.map((t) => `
-      <div class="task">
-        <span class="dot ${t.priority}"></span>
-        <div>
-          <div class="name">${escapeHtml(t.name)}</div>
-          <div class="sub"><span class="pill">${escapeHtml(t.status)}</span>
-            <span>${t.priority}</span>${dueInfo(t)}</div>
-        </div>
-      </div>`).join("") + `</div>`;
+    body.innerHTML = `<div class="comms-list">` + chans.map((c) => {
+      let cond;
+      if (c.state === "off") cond = `<span class="muted">off</span>`;
+      else if (c.state === "unlinked") cond = `<span class="muted">not connected</span>`;
+      else if (c.state === "error") cond = `<span class="pill due-soon">error</span>`;
+      else if (c.state === "quiet") cond = `<span class="muted">quiet</span>`;
+      else cond = c.high
+        ? `<span class="pill due-soon">${c.high} high</span><span class="muted">${c.total} total</span>`
+        : `<span>${c.total} total</span>`;
+      return `<div class="comms-row"><span class="comms-label">${escapeHtml(c.label)}</span><span class="comms-cond">${cond}</span></div>`;
+    }).join("") + `</div>
+    <p class="muted fine">Last 24h via Switchboard — no task lists, just the condition.</p>`;
   } catch (e) {
-    $("task-count").textContent = "";
-    body.innerHTML = `<p class="error">Couldn't load tasks: ${escapeHtml(e.message)}</p>
-      <p class="muted" style="font-size:13px">Set <code>CLICKUP_TOKEN</code> and <code>CLICKUP_LIST_ID</code>
-      in your <code>.env</code>, then restart the server.</p>`;
+    badge.textContent = "";
+    body.innerHTML = `<p class="error">Comms unavailable: ${escapeHtml(e.message)}</p>
+      <p class="muted" style="font-size:13px">Start Switchboard (<code>SWITCHBOARD_URL</code>, default
+      <code>http://127.0.0.1:3002</code>), then refresh.</p>`;
   }
 }
 
@@ -537,10 +531,10 @@ async function spinWhile(btn, fn) {
 }
 
 async function refreshAll() {
-  await Promise.all([loadWeather(), loadTasks(), loadNews(), loadMood()]);
+  await Promise.all([loadWeather(), loadComms(), loadNews(), loadMood()]);
 }
 $("refresh-all").addEventListener("click", (e) => spinWhile(e.currentTarget, refreshAll));
-$("refresh-tasks").addEventListener("click", (e) => spinWhile(e.currentTarget, loadTasks));
+$("refresh-comms").addEventListener("click", (e) => spinWhile(e.currentTarget, loadComms));
 $("refresh-mood").addEventListener("click", (e) => spinWhile(e.currentTarget, loadMood));
 
 applyDaypart();

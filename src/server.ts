@@ -402,92 +402,45 @@ async function handleNews(url: URL): Promise<Response> {
 }
 
 // ---------------------------------------------------------------------------
-// ClickUp tasks (outstanding only)
+// ---------------------------------------------------------------------------
+// comms: terse present-condition summary across Switchboard channels
 // ---------------------------------------------------------------------------
 
-const DONE_RE = /complete|done|closed/i;
+const SWITCHBOARD_URL = (process.env.SWITCHBOARD_URL || "http://127.0.0.1:3002").replace(/\/+$/, "");
+const COMMS_WINDOW_MS = 24 * 3600 * 1000;
 
-async function fetchTasksDirect(token: string, listId: string): Promise<any[]> {
-  const tasks: any[] = [];
-  let page = 0;
-  for (;;) {
-    const r = await fetchWithTimeout(
-      `https://api.clickup.com/api/v2/list/${listId}/task?archived=false&page=${page}`,
-      20000,
-      { headers: { Authorization: token } }
-    );
-    if (r.status === 401) throw new Error("ClickUp rejected the token (401)");
-    if (!r.ok) throw new Error(`ClickUp HTTP ${r.status}`);
-    const body: any = await r.json();
-    tasks.push(...(body.tasks || []));
-    if (body.last_page !== false) break;
-    page++;
-    if (page > 20) break;
-  }
-  return tasks;
-}
-
-async function fetchTasksViaSkill(listId: string): Promise<any[]> {
-  const cli = `${process.env.HOME}/workspace/skills/clickup/bin/clickup_tasks.py`;
-  const file = await Bun.file(cli).exists();
-  if (!file) throw new Error("no ClickUp credential available");
-  const out = `/tmp/briefing-tasks-${Date.now()}.json`;
-  const proc = Bun.spawn(["python3", cli, "--list", listId, "--out", out], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  // The skill may wait on a credential approval; don't hang the request forever.
-  const exited = await Promise.race([proc.exited, Bun.sleep(60000).then(() => "timeout" as const)]);
-  if (exited === "timeout" || exited !== 0) {
-    proc.kill();
-    const err = await new Response(proc.stderr).text().catch(() => "");
-    throw new Error(err.trim() || "task fetch timed out — set CLICKUP_TOKEN to skip the skill helper");
-  }
-  const data = await Bun.file(out).json();
-  await Bun.file(out).unlink().catch(() => {});
-  return data.tasks || [];
-}
-
-const PRIO_BY_ID: Record<string, string> = { 1: "urgent", 2: "high", 3: "normal", 4: "low" };
-
-async function handleTasks(): Promise<Response> {
-  const data = await cached("tasks", 10 * 60 * 1000, async () => {
-    const listId = process.env.CLICKUP_LIST_ID || "901418249044";
-    const token = process.env.CLICKUP_TOKEN || "";
-    let raw: any[];
+async function handleComms(): Promise<Response> {
+  const data = await cached("comms", 2 * 60 * 1000, async () => {
+    let channels: any[] = [], notifications: any[] = [];
     try {
-      raw = token ? await fetchTasksDirect(token, listId) : await fetchTasksViaSkill(listId);
+      const [cr, nr] = await Promise.all([
+        fetchWithTimeout(`${SWITCHBOARD_URL}/api/channels`, 8000),
+        fetchWithTimeout(`${SWITCHBOARD_URL}/api/notifications?limit=50`, 8000),
+      ]);
+      if (!cr.ok || !nr.ok) throw new Error(`switchboard HTTP ${cr.status}/${nr.status}`);
+      channels = (await cr.json()).channels || [];
+      notifications = (await nr.json()).notifications || [];
     } catch (e: any) {
-      return { error: e.message || "task fetch failed", tasks: [], count: 0, total: 0 };
+      return { ok: false, error: e.message || "switchboard unreachable" };
     }
-    const normalized = raw.map((t: any) => {
-      const prio = t.priority || {};
-      let priority: string;
-      if (typeof t.priority === "string") {
-        priority = PRIO_BY_ID[t.priority] || t.priority.toLowerCase();
-      } else {
-        priority = PRIO_BY_ID[String(prio.id || "")] || String(prio.priority || "normal").toLowerCase();
-      }
-      let due = "", due_iso = "";
-      const rawDue = t.due_date || t.due_iso;
-      if (rawDue) {
-        const ms = /^\d+$/.test(String(rawDue)) ? Number(rawDue) : Date.parse(rawDue);
-        if (!Number.isNaN(ms)) {
-          const d = new Date(ms);
-          due_iso = d.toISOString();
-          due = d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" }).toUpperCase();
-        }
-      }
-      return {
-        name: t.name || "",
-        status: (t.status && t.status.status) || t.status || "",
-        priority: ["urgent", "high", "normal", "low"].includes(priority) ? priority : "normal",
-        due,
-        due_iso,
-      };
+    const since = Date.now() - COMMS_WINDOW_MS;
+    const byChannel: Record<string, { high: number; total: number }> = {};
+    for (const n of notifications) {
+      if ((n.created_at || 0) < since) continue;
+      const b = (byChannel[n.channel_id] = byChannel[n.channel_id] || { high: 0, total: 0 });
+      b.total++;
+      if (n.priority === "high" || n.priority === "urgent") b.high++;
+    }
+    const lines = channels.map((c: any) => {
+      const label = (c.meta && c.meta.label) || c.id;
+      if (!c.enabled) return { id: c.id, label, state: "off" };
+      if (c.last_error === "not_connected") return { id: c.id, label, state: "unlinked" };
+      if (c.last_error) return { id: c.id, label, state: "error" };
+      const b = byChannel[c.id] || { high: 0, total: 0 };
+      return { id: c.id, label, state: b.total ? "active" : "quiet", high: b.high, total: b.total };
     });
-    const outstanding = normalized.filter((t) => !DONE_RE.test(t.status));
-    return { tasks: outstanding, count: outstanding.length, total: normalized.length, listId };
+    const high = lines.reduce((s: number, l: any) => s + (l.high || 0), 0);
+    return { ok: true, high, channels: lines };
   });
   return json(data);
 }
@@ -878,7 +831,7 @@ const server = Bun.serve({
     try {
       if (url.pathname === "/api/weather") return await handleWeather(url);
       if (url.pathname === "/api/news") return await handleNews(url);
-      if (url.pathname === "/api/tasks") return await handleTasks();
+      if (url.pathname === "/api/comms") return await handleComms();
       if (url.pathname === "/api/mood") return await handleMood();
       if (url.pathname === "/api/health") return json({ ok: true, time: new Date().toISOString() });
       const staticRes = await serveStatic(url.pathname);
