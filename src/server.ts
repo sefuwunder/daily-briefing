@@ -166,6 +166,8 @@ const ARTS_FEEDS: Record<string, { source: string; url: string; noFilter?: boole
     { source: "Caribbean Collective", url: "https://medium.com/@caribbeancollectivemagazine/feed", noFilter: true },
     { source: "RaptureStone", url: "https://rapturestone.com/feed/", noFilter: true },
     { source: "National Gallery of Jamaica", url: "https://nationalgalleryofjamaica.wordpress.com/feed/" },
+    { source: "Soca News", url: "https://socanews.com/feed/", noFilter: true },
+    { source: "World Music Views", url: "https://worldmusicviews.com/feed/", noFilter: true },
   ],
   africa: [
     { source: "The NATIVE", url: "https://thenativemag.com/feed" },
@@ -179,6 +181,8 @@ const ARTS_FEEDS: Record<string, { source: string; url: string; noFilter?: boole
     { source: "NotJustOk", url: "https://notjustok.com/feed/", noFilter: true },
     { source: "Ta Adesa", url: "https://taadesa.org/feed/", noFilter: true },
     { source: "DakArtNews", url: "https://dakartnews.com/feed/", noFilter: true },
+    { source: "AceWorldTEAM", url: "https://aceworldteam.com/feed/", noFilter: true },
+    { source: "SA Music Magazine", url: "https://samusicmag.co.za/feed/" },
   ],
   easteurope: [
     { source: "Bird In Flight", url: "https://birdinflight.com/feed" },
@@ -468,7 +472,9 @@ const FEAR_WORDS = new Set(
     // 2026-09-14: fugitive (research candidate — appeared twice, not excluded)
     // 2026-09-15: missing (research candidate — appeared twice in disaster headlines, not excluded)
     // 2026-09-19: military (research candidate — two fear-leaning Guardian headlines)
-    "deport tariff tariffs fugitive missing military").split(" ")
+    // 2026-10-10 batch (applied 2026-10-11): doubt/doubts, sacked, furious,
+    // detention — Guardian fear contexts
+    "deport tariff tariffs fugitive missing military doubt doubts sacked furious detention").split(" ")
 );
 
 // Graded intensity tiers (Reagan et al. 2017: continuum-scored words beat
@@ -480,7 +486,7 @@ const FEAR_INTENSITY: Record<string, number> = {
   deadly: 3, dead: 3, death: 3, deaths: 3, kill: 3, killed: 3, killing: 3, kills: 3,
   terror: 3, terrorist: 3, terrorists: 3, terrorism: 3,
   catastrophe: 3, catastrophic: 3, disaster: 3, disastrous: 3,
-  nightmare: 3, horror: 3, hell: 3,
+  nightmare: 3, horror: 3, hell: 3, furious: 3, // 2026-10-11: high tier
   missile: 3, missiles: 3, bomb: 3, bombs: 3, bombing: 3, bombings: 3,
   airstrike: 3, airstrikes: 3, invasion: 3, invade: 3, invaded: 3,
   nuclear: 3, meltdown: 3, plague: 3, epidemic: 3, pandemic: 3, famine: 3,
@@ -560,7 +566,9 @@ const PESSIMISM_WORDS = new Set(
     "failed failing failure failures broken obsolete deprecated abandoned abandon sunset " +
     "sunsetted killed worst terrible terribly awful dreadful bleak grim dire dystopia " +
     "dystopian enshittification collapse collapsed collapsing crash crashed crashing crisis " +
-    "bubble burst overhyped layoffs fired firing pessimistic pessimism skeptical skepticism " +
+    // 2026-10-11: "fires" (fired/firing covered, plural missed); "hard"
+    // (difficulty-framed HN headlines; mild — "hard tech" is admired)
+    "bubble burst overhyped layoffs fired firing fires pessimistic pessimism skeptical skepticism hard " +
     "doubt doubts doubtful doubting uncertain uncertainty fragile fragility flawed flaw " +
     "flaws bug bugs buggy slow slower slowest expensive costly overpriced waste wasted " +
     "wasteful pointless useless scam scams fraud monopoly monopolistic stagnation stagnant " +
@@ -574,6 +582,7 @@ const PESSIMISM_INTENSITY: Record<string, number> = {
   skeptical: 1, skepticism: 1, doubt: 1, doubts: 1, doubtful: 1, doubting: 1,
   uncertain: 1, uncertainty: 1, fragile: 1, fragility: 1,
   slow: 1, slower: 1, slowest: 1, expensive: 1, costly: 1, overpriced: 1,
+  hard: 1,
 };
 
 const OPTIMISM_WORDS = new Set(
@@ -598,6 +607,14 @@ const OPTIMISM_INTENSITY: Record<string, number> = {
   faster: 1, fastest: 1,
 };
 
+// Multi-word expressions: phrases that carry affect only as a unit.
+// research.py parses only the Set(...) blocks above, so these stay
+// invisible to it, like the intensity tables.
+const FEAR_MWES: Array<{ phrase: string; weight: number }> = [
+  // 2026-10-11: "found guilty" — gap word; bare "found" stays unscored.
+  { phrase: "found guilty", weight: 2 },
+];
+
 interface Spectrum {
   id: string;
   label: string; // "fear ↔ hope"
@@ -609,6 +626,7 @@ interface Spectrum {
   posWords: Set<string>;
   negIntensity: Record<string, number>; // per-word tiers; unlisted words default to 2
   posIntensity: Record<string, number>;
+  negMwes?: Array<{ phrase: string; weight: number }>;
 }
 
 const FEAR_HOPE: Spectrum = {
@@ -622,6 +640,7 @@ const FEAR_HOPE: Spectrum = {
   posWords: HOPE_WORDS,
   negIntensity: FEAR_INTENSITY,
   posIntensity: HOPE_INTENSITY,
+  negMwes: FEAR_MWES,
 };
 
 const PESSIMISM_OPTIMISM: Spectrum = {
@@ -692,6 +711,32 @@ function scoreHeadline(title: string, link: string, source: string, sp: Spectrum
     }
     hits++;
   });
+  // Multi-word expressions ("found guilty"): match on the normalized
+  // headline with word boundaries. Negation and resolution words apply
+  // the same way as for single tokens.
+  if (sp.negMwes) {
+    const text = " " + title.toLowerCase().replace(/[^a-z0-9'\s-]/g, " ") + " ";
+    for (const mwe of sp.negMwes) {
+      const needle = " " + mwe.phrase + " ";
+      let idx = text.indexOf(needle);
+      while (idx !== -1) {
+        const before = text
+          .slice(0, idx)
+          .trim()
+          .split(/\s+/)
+          .filter(Boolean)
+          .slice(-2)
+          .map((t) => t.replace(/^'+|'+$/g, ""));
+        const negated = before.some((t) => NEGATORS.has(t) || t.endsWith("n't"));
+        if (!negated && !resolving) {
+          neg += mwe.weight;
+          negHits.push(mwe.phrase);
+          hits++;
+        }
+        idx = text.indexOf(needle, idx + 1);
+      }
+    }
+  }
   const total = neg + pos;
   const raw = total === 0 ? 0 : Math.round((100 * (pos - neg)) / total);
   // A single matched word swings the full ±100; cap at ±50 to cut day-to-day noise.
