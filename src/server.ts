@@ -201,6 +201,7 @@ const ARTS_FEEDS: Record<string, { source: string; url: string; noFilter?: boole
     { source: "Furtherfield", url: "https://www.furtherfield.org/feed/" },
     { source: "DIY Conspiracy", url: "https://diyconspiracy.net/feed/" },
     { source: "Elephant", url: "https://elephant.art/feed/" },
+    { source: "Disquiet", url: "https://disquiet.com/feed/" },
   ],
 };
 
@@ -474,7 +475,10 @@ const FEAR_WORDS = new Set(
     // 2026-09-19: military (research candidate — two fear-leaning Guardian headlines)
     // 2026-10-10 batch (applied 2026-10-11): doubt/doubts, sacked, furious,
     // detention — Guardian fear contexts
-    "deport tariff tariffs fugitive missing military doubt doubts sacked furious detention").split(" ")
+    // 2026-10-16 batch (applied): allegations/allegation, denies/deny/denied —
+    // gap words in fear-framed scandal/legal headlines (tier 1: procedural)
+    "deport tariff tariffs fugitive missing military doubt doubts sacked furious detention " +
+    "allegations allegation denies deny denied").split(" ")
 );
 
 // Graded intensity tiers (Reagan et al. 2017: continuum-scored words beat
@@ -503,6 +507,7 @@ const FEAR_INTENSITY: Record<string, number> = {
   expel: 1, expelled: 1, banned: 1, curfew: 1, deport: 1,
   hack: 1, hacked: 1, hacking: 1, breach: 1, breached: 1, scam: 1, scams: 1,
   missing: 1,
+  allegations: 1, allegation: 1, denies: 1, deny: 1, denied: 1, // 2026-10-16: procedural fear
 };
 
 // 2026-09-16: "discovery"/"discoveries" removed — misfired on a femicide
@@ -553,10 +558,13 @@ const RESOLUTION_WORDS = new Set(["peaked", "slowing", "easing"]);
 // 2026-09-11: fire, ukraine, case, finds.
 // 2026-09-12: google, programming, show, engine, visits, trump, see, ireland, sweden.
 // 2026-09-13: happened (the "as it happened" live-blog marker).
+// 2026-10-16: apple, iphone, sites (high-frequency neutral proper nouns —
+// company/product stop rule, Gligorić caution on neutral-word noise).
 const EXCLUDED_WORDS = new Set([
   "fire", "ukraine", "case", "finds",
   "google", "programming", "show", "engine", "visits", "trump", "see", "ireland", "sweden",
   "happened",
+  "apple", "iphone", "sites",
 ]);
 
 // pessimism / optimism: tuned for tech headlines (Hacker News)
@@ -627,6 +635,9 @@ interface Spectrum {
   negIntensity: Record<string, number>; // per-word tiers; unlisted words default to 2
   posIntensity: Record<string, number>;
   negMwes?: Array<{ phrase: string; weight: number }>;
+  // 2026-10-16: optional asymmetric pole weight (Aigner 2026: 1.2x negative
+  // multiplier for negative-burst asymmetry). Multiplies neg-pole hits only.
+  negWeight?: number;
 }
 
 const FEAR_HOPE: Spectrum = {
@@ -641,6 +652,9 @@ const FEAR_HOPE: Spectrum = {
   negIntensity: FEAR_INTENSITY,
   posIntensity: HOPE_INTENSITY,
   negMwes: FEAR_MWES,
+  // 2026-10-16: Guardian fear hits count 1.2x vs hope (negative-burst
+  // asymmetry, Aigner 2026). research.py does not model this.
+  negWeight: 1.2,
 };
 
 const PESSIMISM_OPTIMISM: Spectrum = {
@@ -702,8 +716,10 @@ function scoreHeadline(title: string, link: string, source: string, sp: Spectrum
     if (kind === "neg" && resolving) return;
     // Graded intensities: a strong word outweighs a mild one
     // (Reagan et al. 2017: continuum-scored words beat binary valence).
+    // 2026-10-16: asymmetric pole weight multiplies neg-pole hits (Aigner 2026).
+    const nw = sp.negWeight ?? 1;
     if (kind === "neg") {
-      neg += sp.negIntensity[word] ?? 2;
+      neg += (sp.negIntensity[word] ?? 2) * nw;
       negHits.push(word);
     } else {
       pos += sp.posIntensity[word] ?? 2;
@@ -729,7 +745,7 @@ function scoreHeadline(title: string, link: string, source: string, sp: Spectrum
           .map((t) => t.replace(/^'+|'+$/g, ""));
         const negated = before.some((t) => NEGATORS.has(t) || t.endsWith("n't"));
         if (!negated && !resolving) {
-          neg += mwe.weight;
+          neg += mwe.weight * (sp.negWeight ?? 1);
           negHits.push(mwe.phrase);
           hits++;
         }
