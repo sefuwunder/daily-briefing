@@ -132,9 +132,10 @@ body {
 @media (max-width: 1150px) {
   .mood { grid-column: span 7; }
   .nightsky-widget { grid-column: span 5; } /* mood(7) + nightsky(5) = 12 */
+  .antikythera-widget { grid-column: span 5; }
 }
 @media (max-width: 900px) {
-  .weather, .tasks, .news, .mood, .nightsky-widget, .pet, .plant, .bookmarks, .meadow { grid-column: span 12; }
+  .weather, .tasks, .news, .mood, .nightsky-widget, .antikythera-widget, .pet, .plant, .bookmarks, .meadow { grid-column: span 12; }
   .mood { min-height: 0; }
 }
 
@@ -550,8 +551,22 @@ body {
 /* Late override: the base spans for these cards are declared after the
    main responsive block, so restate the mobile stacking here to win. */
 @media (max-width: 900px) {
-  .nightsky-widget, .pet, .plant, .bookmarks { grid-column: span 12; }
+  .nightsky-widget, .antikythera-widget, .pet, .plant, .bookmarks { grid-column: span 12; }
 }
+
+/* Antikythera celestial clock: sits beside tonight's sky on its row.
+   The canvas is a dark observatory window (its own bronze/night palette,
+   like the plant's sky) inside the glass card. */
+.antikythera-widget { grid-column: span 4; }
+.antikythera-wrap {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
+  background: rgb(7, 8, 18);
+}
+#antikythera-canvas { display: block; width: 100%; aspect-ratio: 1 / 1; }
+#antikythera-sign { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+#antikythera-readout { margin: 10px 0 0; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }

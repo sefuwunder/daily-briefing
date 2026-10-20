@@ -16,6 +16,14 @@ The heading, greeting, and accent theme shift with the time of day
   for the major constellations, and the three brightest stars to look for.
   Positions come from a built-in 95-star catalog and are degree-level
   accurate — fine for casual stargazing, not for navigation.
+- **Antikythera** — a living bronze celestial clock ported from
+  Chronomancala's software-rendered 3D mechanism: a 48-tooth moon wheel,
+  satellite gears meshing at true ratios, golden sun and silver moon hands,
+  and a saros eclipse pointer over fixed zodiac, Greek and bagua rings.
+  The hands read the real sky — sun/moon longitudes and the true moon
+  phase are computed from the current date (degree-level, like the star
+  map). The readout names the sun's sign, the moon phase, and progress
+  through the 223-month saros cycle.
 - **News** — tabbed headlines, refreshed every 20 minutes. Each region gets
   a **🎨 Underground arts & culture** section with indie/DIY coverage:
   - *CARICOM*: Jamaica Observer, Barbados Today, St Lucia Times —

@@ -106,6 +106,17 @@
     <div class="nightsky" id="nightsky-body"><p class="muted">Loading star map…</p></div>
   </section>
 
+  <section class="card antikythera-widget" data-widget="antikythera" aria-label="Antikythera celestial clock">
+    <div class="card-head">
+      <h2>⚙️ Antikythera <span id="antikythera-sign" class="badge">…</span></h2>
+    </div>
+    <div class="antikythera-wrap">
+      <canvas id="antikythera-canvas" role="img"
+        aria-label="Bronze Antikythera gear clock showing the real positions of the sun and moon"></canvas>
+    </div>
+    <p id="antikythera-readout" class="muted fine" aria-live="polite">Reading the sky…</p>
+  </section>
+
   <section class="card pet" data-widget="pet" aria-label="Desktop pet">
     <div class="card-head">
       <h2>🐾 Desktop pet <span id="pet-mood" class="badge">…</span></h2>
@@ -152,6 +163,7 @@
 </footer>
 
 <script src="/sky.js"></script>
+<script src="/antikythera.js"></script>
 <script src="/pet.js"></script>
 <script src="/plant.js"></script>
 <script src="/meadow.js"></script>
