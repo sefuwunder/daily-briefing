@@ -23,6 +23,10 @@ function ok(cond, name) {
 function near(a, b, tol, name) {
   ok(Math.abs(a - b) <= tol, name + " (got " + a + ", want ~" + b + " ±" + tol + ")");
 }
+function eq(a, b, name) {
+  ok(JSON.stringify(a) === JSON.stringify(b),
+     name + " (got " + JSON.stringify(a) + ", want " + JSON.stringify(b) + ")");
+}
 
 // ---- astronomy: known reference points ----
 // Full moon: Jan 6, 2000 ~18:14 UTC was the epoch NEW moon; +14.77d ≈ full.
@@ -88,6 +92,61 @@ ok(ring.v.length === 128 && ring.f.length === 128, "annulus 64-seg verts/faces")
 const p = A.rotYX([1, 0, 0], 0, 0, Math.PI / 2);
 near(p[0], 0, 1e-9, "rotYX rz 90° x→0");
 near(p[1], 1, 1e-9, "rotYX rz 90° y→1");
+
+// ---- Odù Ifá ----
+ok(A.ODU_MEJI.length === 16, "16 meji odù");
+const seenBits = {};
+for (const o of A.ODU_MEJI) {
+  ok(o.bits.length === 4 && o.bits.every((b) => b === 0 || b === 1), o.stem + " has 4 binary marks");
+  const key = o.bits.join("");
+  ok(!seenBits[key], o.stem + " pattern unique");
+  seenBits[key] = o.stem;
+}
+ok(Object.keys(seenBits).length === 16, "all 16 possible 4-mark patterns present exactly once");
+eq(A.ODU_MEJI[0].bits, [1, 1, 1, 1], "Eji Ogbe = all single marks");
+eq(A.ODU_MEJI[1].bits, [0, 0, 0, 0], "Oyeku = all double marks");
+eq(A.ODU_MEJI.map((o) => o.stem),
+   ["Ogbe", "Oyeku", "Iwori", "Odi", "Irosun", "Owonrin", "Obara", "Okanran",
+    "Ogunda", "Osa", "Ika", "Oturupon", "Otura", "Irete", "Ose", "Ofun"],
+   "seniority order");
+// mirror pairs: reversing the column maps one odù to its partner
+function rev(b) { return b.slice().reverse(); }
+const pairs = [[4, 5], [6, 7], [8, 9], [10, 11], [12, 13], [14, 15]];
+for (const [a, b] of pairs) {
+  eq(rev(A.ODU_MEJI[a].bits), A.ODU_MEJI[b].bits,
+     A.ODU_MEJI[a].stem + " reversed = " + A.ODU_MEJI[b].stem);
+}
+for (const i of [0, 1, 2, 3]) {
+  eq(rev(A.ODU_MEJI[i].bits), A.ODU_MEJI[i].bits, A.ODU_MEJI[i].stem + " is a palindrome");
+}
+// odù of the day: deterministic, cycles through all 256 combinations
+const day0 = new Date(2026, 0, 1);
+eq(A.oduOfDay(day0), A.oduOfDay(new Date(2026, 0, 1)), "oduOfDay deterministic");
+const combos = {}, mejis = {};
+for (let i = 0; i < 256; i++) {
+  const o = A.oduOfDay(new Date(day0.getTime() + i * 86400000));
+  combos[o.right + ":" + o.left] = 1;
+  if (o.meji) {
+    mejis[o.right] = 1;
+    ok(o.name === A.ODU_MEJI[o.right].name, "meji day named " + o.name);
+  } else {
+    ok(o.name === A.ODU_MEJI[o.right].stem + " " + A.ODU_MEJI[o.left].stem,
+       "combo named right-left: " + o.name);
+  }
+}
+ok(Object.keys(combos).length === 256, "256 days cover all 256 combinations");
+ok(Object.keys(mejis).length === 16, "each meji leads exactly once per cycle");
+// figure drawing: count stroke segments via a fake ctx (single=1, double=2 per mark)
+function countSegments(bits) {
+  let moveTo = 0;
+  const fx = { strokeStyle: "", lineWidth: 1, lineCap: "",
+               beginPath() {}, moveTo() { moveTo++; }, lineTo() {}, stroke() {} };
+  A.drawOduFigure(fx, 100, 100, 40, bits, "#fff");
+  return moveTo;
+}
+ok(countSegments([1, 1, 1, 1]) === 8, "Ogbe figure: 8 single strokes");
+ok(countSegments([0, 0, 0, 0]) === 16, "Oyeku figure: 16 strokes (all double)");
+ok(countSegments([0, 1, 1, 0]) === 12, "Iwori figure: 12 strokes");
 
 console.log("antikythera checks: " + pass + " passed, " + fail + " failed");
 process.exit(fail ? 1 : 0);

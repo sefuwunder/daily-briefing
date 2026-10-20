@@ -11,6 +11,13 @@
  * longitudes and the true moon phase are computed from the current date
  * (degree-level astronomy, fine for a dashboard — not for navigation).
  * The wheel itself turns at a stately idle so the machine feels alive.
+ *
+ * An inner ring carries the 16 principal Odù Ifá (meji) as drawn mark
+ * figures — two columns of four single (I) or double (II) strokes; the
+ * patterns follow the traditional seniority order and were verified
+ * against published charts. The day's odù (a 256-day cycle through all
+ * combinations, right/leading half first) highlights its leading figure
+ * on the ring and is named in the readout.
  */
 (function (root, factory) {
   if (typeof module !== "undefined" && module.exports) module.exports = factory();
@@ -50,6 +57,46 @@
       illum: illum,
       phaseName: PHASE_NAMES[Math.floor(phase * 8 + 0.5) % 8],
       saros: saros
+    };
+  }
+
+  /* ============================== Odù Ifá ============================== */
+  // The 16 principal odù (meji) in seniority order. `bits` are the four
+  // marks of one column, TOP row first: 1 = single stroke (I), 0 = double
+  // stroke (II). A meji figure doubles the column (both sides identical);
+  // composite odù pair two columns and are read right (leading) to left.
+  var ODU_MEJI = [
+    { stem: "Ogbe",     name: "Èjì Ogbè",     bits: [1, 1, 1, 1] },
+    { stem: "Oyeku",    name: "Òyẹ̀kú Méjì",   bits: [0, 0, 0, 0] },
+    { stem: "Iwori",    name: "Ìwòrì Méjì",   bits: [0, 1, 1, 0] },
+    { stem: "Odi",      name: "Òdí Méjì",     bits: [1, 0, 0, 1] },
+    { stem: "Irosun",   name: "Ìrosùn Méjì",  bits: [1, 1, 0, 0] },
+    { stem: "Owonrin",  name: "Òwọ́nrín Méjì", bits: [0, 0, 1, 1] },
+    { stem: "Obara",    name: "Òbàrà Méjì",   bits: [1, 0, 0, 0] },
+    { stem: "Okanran",  name: "Òkànràn Méjì", bits: [0, 0, 0, 1] },
+    { stem: "Ogunda",   name: "Ògúndá Méjì",  bits: [1, 1, 1, 0] },
+    { stem: "Osa",      name: "Ọ̀sá Méjì",     bits: [0, 1, 1, 1] },
+    { stem: "Ika",      name: "Ìká Méjì",     bits: [0, 1, 0, 0] },
+    { stem: "Oturupon", name: "Òtúrúpọ̀n Méjì", bits: [0, 0, 1, 0] },
+    { stem: "Otura",    name: "Òtúrá Méjì",   bits: [1, 0, 1, 1] },
+    { stem: "Irete",    name: "Ìrẹtẹ̀ Méjì",   bits: [1, 1, 0, 1] },
+    { stem: "Ose",      name: "Ọ̀ṣẹ́ Méjì",     bits: [1, 0, 1, 0] },
+    { stem: "Ofun",     name: "Òfún Méjì",    bits: [0, 1, 0, 1] }
+  ];
+
+  // The odù of a given date: a straight 256-day cycle through every
+  // combination (deterministic display convention, not a casting).
+  // -> { right, left, name, meji } with right/left indices into ODU_MEJI.
+  function oduOfDay(date) {
+    var d = date || new Date();
+    var days = Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86400000);
+    var idx = ((days % 256) + 256) % 256;
+    var right = idx % 16, left = Math.floor(idx / 16) % 16;
+    var meji = right === left;
+    return {
+      right: right, left: left, meji: meji,
+      name: meji ? ODU_MEJI[right].name
+                 : ODU_MEJI[right].stem + " " + ODU_MEJI[left].stem
     };
   }
 
@@ -319,6 +366,32 @@
     ctx.stroke();
   }
 
+  // One odù figure at screen point (cx, cy), figure height h: two columns of
+  // four marks; a mark is one vertical stroke (bit 1) or two (bit 0).
+  // Meji figures use the same column on both sides.
+  function drawOduFigure(ctx, cx, cy, h, bits, color) {
+    var w = h * 0.52, seg = h * 0.085, rowH = h / 4, j, x;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = Math.max(1.1, h * 0.055);
+    ctx.lineCap = "round";
+    for (var c = 0; c < 2; c++) {
+      var colX = cx + (c === 0 ? -1 : 1) * w * 0.26;
+      for (j = 0; j < 4; j++) {
+        var y = cy - h / 2 + (j + 0.5) * rowH;
+        if (bits[j] === 1) {
+          ctx.beginPath(); ctx.moveTo(colX, y - seg); ctx.lineTo(colX, y + seg); ctx.stroke();
+        } else {
+          var dx = w * 0.13;
+          ctx.beginPath();
+          ctx.moveTo(colX - dx, y - seg); ctx.lineTo(colX - dx, y + seg);
+          ctx.moveTo(colX + dx, y - seg); ctx.lineTo(colX + dx, y + seg);
+          ctx.stroke();
+        }
+      }
+    }
+    ctx.lineCap = "butt";
+  }
+
   function drawFace(ctx, B, info) {
     var i, a, p, p1, p2;
     // 48 tick marks around the fixed ring
@@ -361,6 +434,22 @@
       if (!p) continue;
       ctx.fillStyle = "rgba(168,205,190,0.92)";
       ctx.fillText(BAGUA[i], p[0], p[1]);
+    }
+    // Odù Ifá ring — the 16 meji figures inside the bezel (fixed);
+    // the figure of today's leading odù is lit gold with a halo.
+    var odu = oduOfDay(info.now);
+    var oh = Math.max(14, view.w * 0.07);
+    for (i = 0; i < 16; i++) {
+      a = (i / 16) * TAU + TAU / 32;
+      p = project([WHEEL.x + Math.cos(a) * 3.18, WHEEL.y + Math.sin(a) * 3.18, WHEEL.z + 0.1], B);
+      if (!p) continue;
+      var isToday = i === odu.right;
+      if (isToday) {
+        ctx.fillStyle = "rgba(255,190,80,0.20)";
+        ctx.beginPath(); ctx.arc(p[0], p[1], oh * 0.75, 0, TAU); ctx.fill();
+      }
+      drawOduFigure(ctx, p[0], p[1], oh, ODU_MEJI[i].bits,
+        isToday ? "rgba(255,222,132,1)" : "rgba(219,199,148,0.8)");
     }
     // dikenga cross + arcs + labels (fixed)
     var dz = WHEEL.z + 0.14;
@@ -484,7 +573,8 @@
         readout.textContent =
           "Sun in " + info.sign + " · " + info.phaseName + ", " +
           Math.round(info.illum * 100) + "% lit · saros cycle " +
-          Math.round(info.saros * 100) + "% — hands read the real sky.";
+          Math.round(info.saros * 100) + "% · Odù of the day: " +
+          oduOfDay(info.now).name + ".";
       }
     }
     function frame(t) {
@@ -524,6 +614,9 @@
 
   var api = {
     nowInfo: nowInfo,
+    oduOfDay: oduOfDay,
+    ODU_MEJI: ODU_MEJI,
+    drawOduFigure: drawOduFigure,
     gearAngles: gearAngles,
     gearMesh: gearMesh,
     annulusMesh: annulusMesh,

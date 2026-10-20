@@ -23,7 +23,10 @@ The heading, greeting, and accent theme shift with the time of day
   The hands read the real sky — sun/moon longitudes and the true moon
   phase are computed from the current date (degree-level, like the star
   map). The readout names the sun's sign, the moon phase, and progress
-  through the 223-month saros cycle.
+  through the 223-month saros cycle. An inner ring carries the 16
+  principal Odù Ifá (meji) as traditional mark figures; the day's odù
+  (a deterministic 256-day cycle through all combinations) lights its
+  leading figure in gold and is named in the readout.
 - **News** — tabbed headlines, refreshed every 20 minutes. Each region gets
   a **🎨 Underground arts & culture** section with indie/DIY coverage:
   - *CARICOM*: Jamaica Observer, Barbados Today, St Lucia Times —
