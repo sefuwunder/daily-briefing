@@ -168,6 +168,11 @@ const ARTS_FEEDS: Record<string, { source: string; url: string; noFilter?: boole
     { source: "National Gallery of Jamaica", url: "https://nationalgalleryofjamaica.wordpress.com/feed/" },
     { source: "Soca News", url: "https://socanews.com/feed/", noFilter: true },
     { source: "World Music Views", url: "https://worldmusicviews.com/feed/", noFilter: true },
+    { source: "Sokah2Soca", url: "https://feeds.feedburner.com/sokah2soca", noFilter: true },
+    { source: "Tropicalfete", url: "https://tropicalfete.com/feed/" },
+    { source: "CC Mag", url: "https://caribbeancollectivemag.com/feed/" },
+    { source: "Fresh Milk", url: "https://freshmilkbarbados.com/feed/" },
+    { source: "CanadianYardie", url: "https://canadianyardie.com/feed/" },
   ],
   africa: [
     { source: "The NATIVE", url: "https://thenativemag.com/feed" },
@@ -183,6 +188,13 @@ const ARTS_FEEDS: Record<string, { source: string; url: string; noFilter?: boole
     { source: "DakArtNews", url: "https://dakartnews.com/feed/", noFilter: true },
     { source: "AceWorldTEAM", url: "https://aceworldteam.com/feed/", noFilter: true },
     { source: "SA Music Magazine", url: "https://samusicmag.co.za/feed/" },
+    { source: "Afrocritik", url: "https://afrocritik.com/feed/" },
+    { source: "Rolling Stone Africa", url: "https://rollingstoneafrica.com/feed/", noFilter: true },
+    { source: "Lani Magazine", url: "https://lanimag.blog/feed/" },
+    { source: "Afrobeats Magazine", url: "https://afrobeatsmagazine.com/feed/" },
+    { source: "The Beats of Africa", url: "https://thebeatsofafrica.com/feed/" },
+    { source: "Omiren Styles", url: "https://omirenstyles.com/feed/" },
+    { source: "Low Altitude Mag", url: "https://lowaltitudemag.substack.com/feed" },
   ],
   easteurope: [
     { source: "Bird In Flight", url: "https://birdinflight.com/feed" },
@@ -190,6 +202,8 @@ const ARTS_FEEDS: Record<string, { source: string; url: string; noFilter?: boole
     { source: "Kajet Journal", url: "https://kajetjournal.com/feed/" },
     { source: "Art Margins", url: "https://artmargins.com/feed/", noFilter: true },
     { source: "Hype&Hyper", url: "https://hypeandhyper.com/feed" },
+    { source: "Eurozine", url: "https://www.eurozine.com/feed/" },
+    { source: "Easttopics", url: "https://easttopics.online/feed/" },
   ],
   // global underground art / DIY / net-art — Rhizome & e-flux kin
   // (both sites block feed fetching, so these are the closest working feeds;
@@ -202,6 +216,8 @@ const ARTS_FEEDS: Record<string, { source: string; url: string; noFilter?: boole
     { source: "DIY Conspiracy", url: "https://diyconspiracy.net/feed/" },
     { source: "Elephant", url: "https://elephant.art/feed/" },
     { source: "Disquiet", url: "https://disquiet.com/feed/" },
+    { source: "IDIOTEQ", url: "https://idioteq.com/feed/" },
+    { source: "Crannk", url: "https://crannk.com/feed/" },
   ],
 };
 
