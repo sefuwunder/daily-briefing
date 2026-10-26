@@ -196,6 +196,8 @@ const ARTS_FEEDS: Record<string, { source: string; url: string; noFilter?: boole
     { source: "Omiren Styles", url: "https://omirenstyles.com/feed/" },
     { source: "Low Altitude Mag", url: "https://lowaltitudemag.substack.com/feed" },
     { source: "Art Index Africa", url: "https://artindexafrica.substack.com/feed" },
+    { source: "Isele Magazine", url: "https://iselemagazine.com/feed/", noFilter: true },
+    { source: "The Kalahari Review", url: "https://kalaharireview.com/feed/", noFilter: true },
   ],
   easteurope: [
     { source: "Bird In Flight", url: "https://birdinflight.com/feed" },
