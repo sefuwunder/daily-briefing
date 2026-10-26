@@ -1,6 +1,8 @@
 // Daily briefing dashboard server (Bun).
 // Serves the dashboard UI and proxies weather / news / ClickUp tasks.
 
+import { loadArtsFeeds } from "./opml.ts";
+
 const PORT = Number(process.env.PORT || 3000);
 const PUBLIC_DIR = new URL("../public/", import.meta.url).pathname;
 const UA = { "User-Agent": "daily-briefing/1.0 (+local)" };
@@ -155,74 +157,15 @@ const REGION_LABELS: Record<string, string> = {
   artdiy: "🎨 Art & DIY",
 };
 
-// indie / DIY / underground arts & culture feeds per region
-const ARTS_FEEDS: Record<string, { source: string; url: string; noFilter?: boolean }[]> = {
-  caricom: [
-    { source: "LargeUp", url: "https://www.largeup.com/feed/" },
-    { source: "Repeating Islands", url: "https://repeatingislands.com/feed/" },
-    { source: "Caribbean Beat", url: "https://www.caribbean-beat.com/feed" },
-    { source: "Maria Jackson 27", url: "https://mariajackson27magazine.com/feed/" },
-    { source: "Ebuzztt", url: "https://ebuzztt.com/feed" },
-    { source: "Caribbean Collective", url: "https://medium.com/@caribbeancollectivemagazine/feed", noFilter: true },
-    { source: "RaptureStone", url: "https://rapturestone.com/feed/", noFilter: true },
-    { source: "National Gallery of Jamaica", url: "https://nationalgalleryofjamaica.wordpress.com/feed/" },
-    { source: "Soca News", url: "https://socanews.com/feed/", noFilter: true },
-    { source: "World Music Views", url: "https://worldmusicviews.com/feed/", noFilter: true },
-    { source: "Sokah2Soca", url: "https://feeds.feedburner.com/sokah2soca", noFilter: true },
-    { source: "Tropicalfete", url: "https://tropicalfete.com/feed/" },
-    { source: "CC Mag", url: "https://caribbeancollectivemag.com/feed/" },
-    { source: "Fresh Milk", url: "https://freshmilkbarbados.com/feed/" },
-    { source: "CanadianYardie", url: "https://canadianyardie.com/feed/" },
-  ],
-  africa: [
-    { source: "The NATIVE", url: "https://thenativemag.com/feed" },
-    { source: "Music In Africa", url: "https://www.musicinafrica.net/feed" },
-    { source: "ART AFRICA Magazine", url: "https://artafricamagazine.org/feed/" },
-    { source: "Africa Is a Country", url: "https://africasacountry.com/feed" },
-    { source: "Halmblog Music", url: "https://halmblog.com/feed" },
-    { source: "Brittle Paper", url: "https://brittlepaper.com/feed/", noFilter: true },
-    { source: "Omenana", url: "https://omenana.com/feed/", noFilter: true },
-    { source: "Africanah", url: "https://africanah.org/feed/" },
-    { source: "NotJustOk", url: "https://notjustok.com/feed/", noFilter: true },
-    { source: "Ta Adesa", url: "https://taadesa.org/feed/", noFilter: true },
-    { source: "DakArtNews", url: "https://dakartnews.com/feed/", noFilter: true },
-    { source: "AceWorldTEAM", url: "https://aceworldteam.com/feed/", noFilter: true },
-    { source: "SA Music Magazine", url: "https://samusicmag.co.za/feed/" },
-    { source: "Afrocritik", url: "https://afrocritik.com/feed/" },
-    { source: "Rolling Stone Africa", url: "https://rollingstoneafrica.com/feed/", noFilter: true },
-    { source: "Lani Magazine", url: "https://lanimag.blog/feed/" },
-    { source: "Afrobeats Magazine", url: "https://afrobeatsmagazine.com/feed/" },
-    { source: "The Beats of Africa", url: "https://thebeatsofafrica.com/feed/" },
-    { source: "Omiren Styles", url: "https://omirenstyles.com/feed/" },
-    { source: "Low Altitude Mag", url: "https://lowaltitudemag.substack.com/feed" },
-    { source: "Art Index Africa", url: "https://artindexafrica.substack.com/feed" },
-    { source: "Isele Magazine", url: "https://iselemagazine.com/feed/", noFilter: true },
-    { source: "The Kalahari Review", url: "https://kalaharireview.com/feed/", noFilter: true },
-  ],
-  easteurope: [
-    { source: "Bird In Flight", url: "https://birdinflight.com/feed" },
-    { source: "Lossi 36", url: "https://lossi36.com/feed/" },
-    { source: "Kajet Journal", url: "https://kajetjournal.com/feed/" },
-    { source: "Art Margins", url: "https://artmargins.com/feed/", noFilter: true },
-    { source: "Hype&Hyper", url: "https://hypeandhyper.com/feed" },
-    { source: "Eurozine", url: "https://www.eurozine.com/feed/" },
-    { source: "Easttopics", url: "https://easttopics.online/feed/" },
-  ],
-  // global underground art / DIY / net-art — Rhizome & e-flux kin
-  // (both sites block feed fetching, so these are the closest working feeds;
-  // the arts block links out to rhizome.org and e-flux.com directly)
-  artdiy: [
-    { source: "Neural", url: "https://neural.it/feed/" },
-    { source: "Hyperallergic", url: "https://hyperallergic.com/feed/" },
-    { source: "We Make Money Not Art", url: "https://we-make-money-not-art.com/feed/" },
-    { source: "Furtherfield", url: "https://www.furtherfield.org/feed/" },
-    { source: "DIY Conspiracy", url: "https://diyconspiracy.net/feed/" },
-    { source: "Elephant", url: "https://elephant.art/feed/" },
-    { source: "Disquiet", url: "https://disquiet.com/feed/" },
-    { source: "IDIOTEQ", url: "https://idioteq.com/feed/" },
-    { source: "Crannk", url: "https://crannk.com/feed/" },
-  ],
-};
+// indie / DIY / underground arts & culture feeds per region.
+// Single source of truth: arts-feeds.opml at the repo root. Add, remove,
+// or retag feeds there, not here. The loader reads only the four live
+// groups (caricom, africa, easteurope, artdiy) and never the proposed
+// group; region and noFilter behavior is unchanged from the list this
+// replaced (verified: identical URLs, regions, and noFilter flags).
+const ARTS_FEEDS = await loadArtsFeeds(
+  new URL("../arts-feeds.opml", import.meta.url).pathname,
+);
 
 function stripCdata(s: string): string {
   return s
